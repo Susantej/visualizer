@@ -4,21 +4,25 @@ import { BibleReader } from '@/components/BibleReader';
 import { FirecrawlService } from '@/utils/FirecrawlService';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { Card } from '@/components/ui/card';
 
 const Index = () => {
   const [translation, setTranslation] = useState('KJV');
   const { toast } = useToast();
   const [readingPlan, setReadingPlan] = useState<{ day: number; references: string[] } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchReadingPlan = async () => {
+    setIsLoading(true);
     const result = await FirecrawlService.crawlBiblePlan();
+    setIsLoading(false);
     
-    if (result.success && result.data) {
-      // Process the crawled data to extract reading plan
-      // This is a placeholder - you'll need to process the actual crawled data
+    if (result.success && result.data && result.data.length > 0) {
+      // Get the first day's reading
+      const firstDay = result.data[0];
       setReadingPlan({
-        day: 1,
-        references: ["Genesis 1:1-2:25"]
+        day: firstDay.day,
+        references: firstDay.references
       });
       
       toast({
@@ -45,14 +49,19 @@ const Index = () => {
 
       <main className="container mx-auto px-4">
         {!readingPlan ? (
-          <div className="text-center py-12">
+          <Card className="p-6 text-center max-w-md mx-auto">
+            <h2 className="text-xl font-serif mb-4">One Year Chronological Bible</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Start your journey through the Bible in chronological order
+            </p>
             <Button
               onClick={fetchReadingPlan}
               className="bg-scripture-light dark:bg-scripture-dark text-gray-800 dark:text-gray-200"
+              disabled={isLoading}
             >
-              Load Reading Plan
+              {isLoading ? "Loading..." : "Load Reading Plan"}
             </Button>
-          </div>
+          </Card>
         ) : (
           <BibleReader
             day={readingPlan.day}

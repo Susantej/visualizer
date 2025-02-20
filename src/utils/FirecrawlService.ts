@@ -6,6 +6,13 @@ interface ErrorResponse {
   error: string;
 }
 
+interface ReadingPlanDay {
+  day: number;
+  references: string[];
+  title?: string;
+  description?: string;
+}
+
 interface CrawlStatusResponse {
   success: true;
   status: string;
@@ -32,7 +39,7 @@ export class FirecrawlService {
     return localStorage.getItem(this.API_KEY_STORAGE_KEY);
   }
 
-  static async crawlBiblePlan(): Promise<{ success: boolean; error?: string; data?: any }> {
+  static async crawlBiblePlan(): Promise<{ success: boolean; error?: string; data?: ReadingPlanDay[] }> {
     const apiKey = this.getApiKey();
     if (!apiKey) {
       return { success: false, error: 'API key not found' };
@@ -43,12 +50,27 @@ export class FirecrawlService {
         this.firecrawlApp = new FirecrawlApp({ apiKey });
       }
 
+      console.log('Starting Bible.com reading plan crawl');
       const crawlResponse = await this.firecrawlApp.crawlUrl(
         'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
         {
-          limit: 100,
+          limit: 366, // Account for potential extra day
           scrapeOptions: {
-            formats: ['markdown', 'html'],
+            selectors: {
+              days: {
+                selector: '.reading-plan-day',
+                type: 'list',
+                properties: {
+                  title: '.day-title',
+                  description: '.day-description',
+                  references: {
+                    selector: '.reference',
+                    type: 'list',
+                    attribute: 'text'
+                  }
+                }
+              }
+            }
           }
         }
       ) as CrawlResponse;
@@ -61,10 +83,18 @@ export class FirecrawlService {
         };
       }
 
-      console.log('Crawl successful:', crawlResponse);
+      // Process and format the crawled data
+      const readingPlan = crawlResponse.data.map((day: any, index: number) => ({
+        day: index + 1,
+        title: day.title,
+        description: day.description,
+        references: day.references || []
+      }));
+
+      console.log('Crawl successful, processed reading plan:', readingPlan);
       return {
         success: true,
-        data: crawlResponse
+        data: readingPlan
       };
     } catch (error) {
       console.error('Error during crawl:', error);
@@ -72,6 +102,20 @@ export class FirecrawlService {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to connect to Firecrawl API'
       };
+    }
+  }
+
+  static async testApiKey(apiKey: string): Promise<boolean> {
+    try {
+      console.log('Testing API key with Firecrawl API');
+      this.firecrawlApp = new FirecrawlApp({ apiKey });
+      const testResponse = await this.firecrawlApp.crawlUrl('https://example.com', {
+        limit: 1
+      });
+      return testResponse.success;
+    } catch (error) {
+      console.error('Error testing API key:', error);
+      return false;
     }
   }
 }
