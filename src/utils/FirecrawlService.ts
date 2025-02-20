@@ -56,20 +56,16 @@ export class FirecrawlService {
         {
           limit: 366, // Account for potential extra day
           scrapeOptions: {
-            selectors: {
-              days: {
-                selector: '.reading-plan-day',
-                type: 'list',
-                properties: {
-                  title: '.day-title',
-                  description: '.day-description',
-                  references: {
-                    selector: '.reference',
-                    type: 'list',
-                    attribute: 'text'
-                  }
-                }
-              }
+            waitForSelector: '.reading-plan-day',
+            evaluate: (page: any) => {
+              const days = Array.from(document.querySelectorAll('.reading-plan-day'));
+              return days.map(day => ({
+                title: day.querySelector('.day-title')?.textContent?.trim() || '',
+                description: day.querySelector('.day-description')?.textContent?.trim() || '',
+                references: Array.from(day.querySelectorAll('.reference')).map(ref => 
+                  ref.textContent?.trim() || ''
+                )
+              }));
             }
           }
         }
