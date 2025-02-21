@@ -56,17 +56,7 @@ export class FirecrawlService {
         {
           limit: 366, // Account for potential extra day
           scrapeOptions: {
-            formats: ['html'],
-            evaluate: () => {
-              const days = Array.from(document.querySelectorAll('.reading-plan-day'));
-              return days.map(day => ({
-                title: day.querySelector('.day-title')?.textContent?.trim() || '',
-                description: day.querySelector('.day-description')?.textContent?.trim() || '',
-                references: Array.from(day.querySelectorAll('.reference')).map(ref => 
-                  ref.textContent?.trim() || ''
-                )
-              }));
-            }
+            formats: ['html']
           }
         }
       ) as CrawlResponse;
@@ -79,13 +69,21 @@ export class FirecrawlService {
         };
       }
 
-      // Process and format the crawled data
-      const readingPlan = crawlResponse.data.map((day: any, index: number) => ({
-        day: index + 1,
-        title: day.title,
-        description: day.description,
-        references: day.references || []
-      }));
+      // Process the raw HTML to extract reading plan data
+      const data = crawlResponse.data;
+      const readingPlan = data.map((item: any, index: number) => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(item.html || '', 'text/html');
+        
+        const dayElement = doc.querySelector('.reading-plan-day');
+        return {
+          day: index + 1,
+          title: dayElement?.querySelector('.day-title')?.textContent?.trim() || '',
+          description: dayElement?.querySelector('.day-description')?.textContent?.trim() || '',
+          references: Array.from(dayElement?.querySelectorAll('.reference') || [])
+            .map(ref => ref.textContent?.trim() || '')
+        };
+      });
 
       console.log('Crawl successful, processed reading plan:', readingPlan);
       return {
