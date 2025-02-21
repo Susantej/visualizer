@@ -56,8 +56,8 @@ export class FirecrawlService {
         {
           limit: 366, // Account for potential extra day
           scrapeOptions: {
-            waitForSelector: '.reading-plan-day',
-            evaluate: (page: any) => {
+            formats: ['html'],
+            evaluate: () => {
               const days = Array.from(document.querySelectorAll('.reading-plan-day'));
               return days.map(day => ({
                 title: day.querySelector('.day-title')?.textContent?.trim() || '',
