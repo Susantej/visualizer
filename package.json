@@ -83,9 +83,4 @@
     "vite": "^5.4.1"
   }
 }
-// Remove Vite integration if unused
-const nextConfig = {
-  // Keep existing config
-};
 
-module.exports = nextConfig;
