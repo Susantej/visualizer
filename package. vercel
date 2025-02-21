@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "esbuild": "^0.24.3",  // Patched version
+    "vite": "^5.2.12",     // Latest stable
+    "@vitejs/plugin-react-swc": "^4.2.5"
+  }
+}
