@@ -13,12 +13,17 @@ interface BibleReaderProps {
   onTranslationChange: (translation: string) => void;
 }
 
+interface BibleVerse {
+  book_id: string;
+  book_name: string;
+  chapter: number;
+  verse: number;
+  text: string;
+}
+
 const translations = [
-  { value: 'KJV', label: 'King James Version' },
-  { value: 'NIV', label: 'New International Version' },
-  { value: 'ESV', label: 'English Standard Version' },
-  { value: 'NKJV', label: 'New King James Version' },
-  { value: 'AMPC', label: 'Amplified Bible Classic' },
+  { value: 'kjv', label: 'King James Version' },
+  { value: 'web', label: 'World English Bible' },
 ];
 
 export const BibleReader: React.FC<BibleReaderProps> = ({
@@ -37,30 +42,33 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
       try {
         const contents: { [key: string]: string } = {};
         for (const reference of references) {
-          // Using the API.Bible API (example URL - you'll need to replace with actual endpoint)
-          const response = await axios.get(`https://api.scripture.api.bible/v1/bibles/${translation}/passages/${reference}`, {
-            headers: {
-              'api-key': 'YOUR_API_KEY' // You'll need to get an API key from API.Bible
-            }
-          });
-          contents[reference] = response.data.data.content;
+          // Using the bible_api.git API
+          const response = await axios.get(`https://bible-api.com/${reference}?translation=${translation.toLowerCase()}`);
+          
+          // The API returns the text directly
+          contents[reference] = response.data.text;
         }
         setBibleContent(contents);
       } catch (error) {
         console.error('Error fetching Bible content:', error);
-        // For now, let's add some sample content so we can see something
-        const sampleContent: { [key: string]: string } = {};
-        references.forEach(ref => {
-          sampleContent[ref] = `Sample content for ${ref}. In the beginning God created the heaven and the earth. And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.`;
+        toast({
+          title: "Error",
+          description: "Failed to load Bible content. Please try again.",
+          variant: "destructive",
         });
-        setBibleContent(sampleContent);
+        // Show error state in content
+        const errorContent: { [key: string]: string } = {};
+        references.forEach(ref => {
+          errorContent[ref] = "Unable to load Bible content. Please try again.";
+        });
+        setBibleContent(errorContent);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchBibleContent();
-  }, [references, translation]);
+  }, [references, translation, toast]);
 
   const handleGenerateInsights = () => {
     toast({
@@ -93,7 +101,7 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
           {references.map((reference, index) => (
             <div key={index} className="space-y-4">
               <h3 className="text-xl font-serif">{reference}</h3>
-              <p className="font-serif text-lg leading-relaxed">
+              <p className="font-serif text-lg leading-relaxed whitespace-pre-line">
                 {isLoading ? (
                   "Loading scripture content..."
                 ) : (
