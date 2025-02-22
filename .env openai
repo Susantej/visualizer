@@ -1,6 +1,1 @@
-import OpenAI from "openai";
 
-const openai = new OpenAI({
-    organization: "org-h29Ceh6tRERG2SvzqmF2K9ot",
-    project: "proj_P9GJnQgWgTl6HvkLRPmQM3NZ",
-});
