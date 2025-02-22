@@ -37,8 +37,8 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
       try {
         const contents: { [key: string]: string } = {};
         for (const reference of references) {
-          // Format the reference to match the API requirements (e.g., "Genesis 1:1-31")
-          const formattedRef = reference.replace(/\s/g, '+');
+          // Format the reference to match the API requirements
+          const formattedRef = encodeURIComponent(reference);
           console.log('Fetching reference:', formattedRef);
           
           const url = `https://bible-api.deno.dev/${translation}/${formattedRef}`;
@@ -48,12 +48,13 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
           console.log('API Response:', response.data);
           
           if (response.data && Array.isArray(response.data)) {
-            // Handle array response format
             contents[reference] = response.data.map((verse: any) => verse.text).join(' ');
-          } else if (response.data && response.data.verses) {
-            // Handle object response format with verses property
-            contents[reference] = response.data.verses.map((verse: any) => verse.text).join(' ');
+          } else if (response.data && typeof response.data === 'string') {
+            contents[reference] = response.data;
+          } else if (response.data && response.data.text) {
+            contents[reference] = response.data.text;
           } else {
+            console.error('Unexpected response format:', response.data);
             throw new Error('Unexpected API response format');
           }
         }
