@@ -1,52 +1,37 @@
+import { FirecrawlDocument } from "@mendable/firecrawl-js";
 
-import { FirecrawlClient } from '@mendable/firecrawl-js';
+const BIBLE_PLAN_URL =
+  "https://www.bible.com/users/TejuoshoSusan142/reading-plans/10819-the-one-year-chronological-bible/subscription/1143073754/";
 
-export class FirecrawlService {
-  private static API_KEY_STORAGE_KEY = 'firecrawl_api_key';
-  private static firecrawlClient: FirecrawlClient | null = null;
+async function loadBiblePlan(): Promise<any[] | null> {
+  try {
+    console.log("Fetching Bible plan...");
 
-  static async crawlBiblePlan(): Promise<{ success: boolean; error?: string; data?: any }> {
-    const apiKey = import.meta.env.VITE_FIRECRAWL_API_KEY;
-    if (!apiKey) {
-      return { success: false, error: 'API key not found' };
+    const document = new FirecrawlDocument({
+      url: BIBLE_PLAN_URL,
+      waitForSelector: ".day-title",
+    });
+
+    const result = await document.extract({
+      dayTitle: { selector: ".day-title", type: "text" },
+      passages: { selector: ".readings li", type: "text[]", attribute: "textContent" },
+    });
+
+    if (!result) {
+      throw new Error("Failed to fetch Bible plan.");
     }
 
-    try {
-      if (!this.firecrawlClient) {
-        this.firecrawlClient = new FirecrawlClient({ apiKey });
-      }
+    console.log("Crawl result:", result);
 
-      const response = await this.firecrawlClient.crawl({
-        url: 'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
-        waitForSelector: ".day",
-        evaluatePage: async (page) => {
-          const days = await page.$$eval('.day', (elements) => 
-            elements.map(el => ({
-              date: el.querySelector('.day-title')?.textContent || '',
-              readings: Array.from(el.querySelectorAll('.readings li')).map(li => li.textContent || '')
-            }))
-          );
-          return days;
-        }
-      });
-
-      if ('error' in response) {
-        return { 
-          success: false, 
-          error: response.error 
-        };
-      }
-
-      return { 
-        success: true,
-        data: response.data 
-      };
-    } catch (error) {
-      console.error('Error during crawl:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to connect to Firecrawl API' 
-      };
-    }
+    return result.dayTitle.map((title: string, index: number) => ({
+      day: index + 1,
+      title,
+      readings: result.passages[index] || [],
+    }));
+  } catch (error) {
+    console.error("Error loading Bible plan:", error.message);
+    return null;
   }
 }
+
+export default loadBiblePlan;
