@@ -17,8 +17,14 @@ serve(async (req) => {
 
   try {
     const { prompt, type } = await req.json();
+    console.log('Received request:', { type, promptLength: prompt?.length });
+
+    if (!prompt) {
+      throw new Error('Prompt is required');
+    }
 
     if (type === 'text') {
+      console.log('Generating text with OpenAI...');
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
@@ -33,10 +39,12 @@ serve(async (req) => {
         ]
       });
 
+      console.log('Text generation successful');
       return new Response(JSON.stringify({ text: response.choices[0].message.content }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else if (type === 'image') {
+      console.log('Generating image with OpenAI...');
       const response = await openai.images.generate({
         model: "dall-e-3",
         prompt: `Create a respectful, artistic visualization of this Bible passage: ${prompt}. Style: classical art, biblical, respectful, inspirational.`,
@@ -44,13 +52,19 @@ serve(async (req) => {
         size: "1024x1024",
       });
 
+      console.log('Image generation successful');
       return new Response(JSON.stringify({ imageUrl: response.data[0].url }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    } else {
+      throw new Error(`Invalid type specified: ${type}`);
     }
   } catch (error) {
-    console.error('Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Error in generate-content function:', error);
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      details: error.response?.data || error.toString()
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
