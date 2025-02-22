@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install && npx vite build",
+  "buildCommand": "npm install @vitejs/plugin-react --no-save && npx vite build",
   "outputDirectory": "dist",
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1" },
