@@ -1,55 +1,54 @@
+import { FirecrawlClient, CrawlStatusResponse, ErrorResponse } from "@mendable/firecrawl-js";
 
-import FirecrawlApp from '@mendable/firecrawl-js';
+const BIBLE_PLAN_URL =
+  "https://www.bible.com/users/TejuoshoSusan142/reading-plans/10819-the-one-year-chronological-bible/subscription/1143073754/";
 
-export class FirecrawlService {
-  private static API_KEY_STORAGE_KEY = 'firecrawl_api_key';
-  private static firecrawlApp: FirecrawlApp | null = null;
+const firecrawl = new FirecrawlClient({
+  apiKey: import.meta.env.VITE_FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY,
+});
 
-  static async crawlBiblePlan(): Promise<{ success: boolean; error?: string; data?: any }> {
-    const apiKey = import.meta.env.VITE_FIRECRAWL_API_KEY;
-    if (!apiKey) {
-      return { success: false, error: 'API key not found' };
+// Function to check for API errors
+function isErrorResponse(response: any): response is ErrorResponse {
+  return response && "error" in response;
+}
+
+async function loadBiblePlan(): Promise<any[] | null> {
+  try {
+    if (!firecrawl.apiKey) {
+      throw new Error("Firecrawl API key is missing. Set VITE_FIRECRAWL_API_KEY.");
     }
 
-    try {
-      if (!this.firecrawlApp) {
-        this.firecrawlApp = new FirecrawlApp({ apiKey });
-      }
+    console.log("Fetching Bible plan...");
 
-      const response = await this.firecrawlApp.crawlUrl(
-        'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
-        {
-          scrapeOptions: {
-            root: ".day",
-            extract: {
-              date: { root: ".day-title" },
-              readings: { 
-                root: ".readings li",
-                isArray: true
-              }
-            }
-          },
-          waitForSelector: ".day"
-        }
-      );
+    const result: CrawlStatusResponse | ErrorResponse = await firecrawl.crawl({
+      url: BIBLE_PLAN_URL,
+      elements: {
+        dayTitle: ".day-title",
+        passages: ".readings li", // Ensure this matches actual site structure
+      },
+      waitForSelector: ".day-title",
+    });
 
-      if ('error' in response) {
-        return { 
-          success: false, 
-          error: response.error 
-        };
-      }
-
-      return { 
-        success: true,
-        data: response.data 
-      };
-    } catch (error) {
-      console.error('Error during crawl:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to connect to Firecrawl API' 
-      };
+    if (isErrorResponse(result)) {
+      console.error("Firecrawl API Error:", result.error);
+      throw new Error(`API Error: ${result.error}`);
     }
+
+    console.log("Crawl result:", result);
+
+    if (!result?.data) {
+      throw new Error("No daily readings found.");
+    }
+
+    return result.data.map((day, index) => ({
+      day: index + 1,
+      title: day.dayTitle || `Day ${index + 1}`,
+      readings: day.passages || [],
+    }));
+  } catch (error) {
+    console.error("Error loading Bible plan:", error.message);
+    return null;
   }
 }
+
+export default loadBiblePlan;
