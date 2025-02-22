@@ -20,6 +20,9 @@ const translations = [
   { value: 'en-amp', label: 'Amplified Bible Classic' },
 ];
 
+// ESV API Key - this is a public demo key
+const ESV_API_KEY = '924029c515d74bf162d3b3909203c4f32380cc9f';
+
 export const BibleReader: React.FC<BibleReaderProps> = ({
   day,
   references,
@@ -38,17 +41,22 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
         for (const reference of references) {
           console.log('Fetching reference:', reference);
           
-          // Using the Bible API
-          const url = `https://bible-api.com/${encodeURIComponent(reference)}`;
+          // Using the ESV API
+          const url = `https://api.esv.org/v3/passage/text/?q=${encodeURIComponent(reference)}&include-headings=false&include-footnotes=false&include-verse-numbers=true`;
           console.log('API URL:', url);
           
-          const response = await axios.get(url);
+          const response = await axios.get(url, {
+            headers: {
+              'Authorization': `Token ${ESV_API_KEY}`
+            }
+          });
+          
           console.log('API Response:', response.data);
           
-          if (response.data && response.data.text) {
-            contents[reference] = response.data.text;
+          if (response.data && response.data.passages && response.data.passages.length > 0) {
+            contents[reference] = response.data.passages[0].trim();
           } else {
-            throw new Error('Unexpected API response format');
+            throw new Error('No passage found for reference');
           }
         }
         
