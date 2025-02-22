@@ -26,12 +26,12 @@ interface CrawlStatusResponse {
 type CrawlResponse = CrawlStatusResponse | ErrorResponse;
 
 export class FirecrawlService {
-  private static API_KEY_STORAGE_KEY = 'fc-961da62d0c67498c8149fbdfda580cf5';
+  private static API_KEY_STORAGE_KEY='fc-961da62d0c67498c8149fbdfda580cf5';
   private static firecrawlApp: FirecrawlApp | null = null;
 
   static saveApiKey(apiKey: string): void {
     localStorage.setItem(this.API_KEY_STORAGE_KEY, apiKey);
-    this.firecrawlApp = new FirecrawlApp({ apiKey });
+    this.firecrawlApp = new FirecrawlApp({'fc-961da62d0c67498c8149fbdfda580cf5'});
     console.log('API key saved successfully');
   }
 
