@@ -1,10 +1,10 @@
 
-import { FirecrawlClient } from "@mendable/firecrawl-js";
+import FirecrawlApp from "@mendable/firecrawl-js";
 
 const BIBLE_PLAN_URL =
   "https://www.bible.com/users/TejuoshoSusan142/reading-plans/10819-the-one-year-chronological-bible/subscription/1143073754/";
 
-const firecrawl = new FirecrawlClient({
+const firecrawl = new FirecrawlApp({
   apiKey: import.meta.env.VITE_FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY,
 });
 
@@ -25,32 +25,24 @@ export async function loadBiblePlan(): Promise<DayPlan[] | null> {
 
     console.log("Starting to load Bible plan...");
 
-    const result = await firecrawl.crawl({
-      url: BIBLE_PLAN_URL,
-      elements: {
-        days: {
-          _root: ".day",
-          date: ".day-title",
-          readings: {
-            _root: ".readings",
-            passage: "li"
-          },
-        },
-      },
-      waitForSelector: ".day",
+    const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL, {
+      limit: 366,
+      scrapeOptions: {
+        formats: ['html']
+      }
     });
 
     console.log("Crawl result:", result);
 
-    if (!result || !result.days) {
+    if (!result.success) {
       throw new Error("Failed to load daily readings.");
     }
 
     // Process and structure data
-    const structuredPlan = result.days.map((day: any, index: number) => ({
+    const structuredPlan = result.data.map((day: any, index: number) => ({
       day: index + 1,
-      date: day.date || `Day ${index + 1}`,
-      readings: day.readings?.passage || [],
+      date: `Day ${index + 1}`,
+      readings: Array.isArray(day.links) ? day.links : [],
     }));
 
     return structuredPlan;
