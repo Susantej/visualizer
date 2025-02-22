@@ -26,9 +26,8 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
 
     console.log("Starting to load Bible plan...");
 
-    const result = await firecrawl.crawl({
-      url: BIBLE_PLAN_URL,
-      elements: {
+    const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL, {
+      selectors: {
         days: {
           _root: ".day",
           date: ".day-title",

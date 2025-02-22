@@ -33,9 +33,8 @@ export class FirecrawlService {
         this.firecrawlApp = new FirecrawlApp({ apiKey });
       }
 
-      const response = await this.firecrawlApp.crawl({
-        url: 'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
-        elements: {
+      const response = await this.firecrawlApp.crawlUrl('https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible', {
+        selectors: {
           days: {
             _root: ".day",
             date: ".day-title",
