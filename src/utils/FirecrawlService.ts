@@ -4,7 +4,7 @@ const BIBLE_PLAN_URL =
   "https://www.bible.com/users/TejuoshoSusan142/reading-plans/10819-the-one-year-chronological-bible/subscription/1143073754/";
 
 const firecrawl = new FirecrawlClient({
-  apiKey: import.meta.env.VITE_FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY,
+  apiKey: import.meta.env.VITE_FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY|| "fc-961da62d0c67498c8149fbdfda580cf5",
 });
 
 // Function to check for API errors
