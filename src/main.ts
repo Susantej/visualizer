@@ -1,3 +1,4 @@
+
 import { FirecrawlClient } from "@mendable/firecrawl-js";
 import { useEffect, useState } from "react";
 
@@ -8,8 +9,14 @@ const firecrawl = new FirecrawlClient({
   apiKey: import.meta.env.VITE_FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY,
 });
 
+interface DayPlan {
+  day: number;
+  date: string;
+  readings: string[];
+}
+
 // Function to extract daily readings correctly
-async function loadBiblePlan() {
+async function loadBiblePlan(): Promise<DayPlan[] | null> {
   try {
     if (!firecrawl.apiKey) {
       throw new Error(
@@ -23,11 +30,11 @@ async function loadBiblePlan() {
       url: BIBLE_PLAN_URL,
       elements: {
         days: {
-          _root: ".day", // Adjust based on HTML structure
-          date: ".day-title", // The title for each day (e.g., "Day 3")
+          _root: ".day",
+          date: ".day-title",
           readings: {
-            _root: ".readings", // The container that holds the readings
-            passage: "li" // Each Bible passage inside the list
+            _root: ".readings",
+            passage: "li"
           },
         },
       },
@@ -42,21 +49,21 @@ async function loadBiblePlan() {
 
     // Process and structure data
     const structuredPlan = result.days.map((day, index) => ({
-      day: index + 1, // Assuming ordered structure
+      day: index + 1,
       date: day.date || `Day ${index + 1}`,
       readings: day.readings?.passage || [],
     }));
 
     return structuredPlan;
   } catch (error) {
-    console.error("Error loading Bible plan:", error.message);
-    return null; // Handle error case
+    console.error("Error loading Bible plan:", error instanceof Error ? error.message : String(error));
+    return null;
   }
 }
 
 export default function BiblePlanComponent() {
-  const [biblePlan, setBiblePlan] = useState([]);
-  const [error, setError] = useState("");
+  const [biblePlan, setBiblePlan] = useState<DayPlan[]>([]);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     loadBiblePlan()
@@ -67,7 +74,7 @@ export default function BiblePlanComponent() {
           setError("Failed to fetch Bible plan. Please try again later.");
         }
       })
-      .catch((err) => setError(err.message));
+      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, []);
 
   return (
@@ -77,7 +84,10 @@ export default function BiblePlanComponent() {
       {biblePlan.length > 0 ? (
         <div>
           {biblePlan.map((day) => (
-            <div key={day.day} style={{ marginBottom: "20px", borderBottom: "1px solid #ccc", paddingBottom: "10px" }}>
+            <div
+              key={day.day}
+              style={{ marginBottom: "20px", borderBottom: "1px solid #ccc", paddingBottom: "10px" }}
+            >
               <h3>{day.date}</h3>
               <ul>
                 {day.readings.map((passage, idx) => (
