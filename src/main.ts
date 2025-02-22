@@ -1,6 +1,5 @@
 
 import { FirecrawlClient } from "@mendable/firecrawl-js";
-import { useEffect, useState } from "react";
 
 const BIBLE_PLAN_URL =
   "https://www.bible.com/users/TejuoshoSusan142/reading-plans/10819-the-one-year-chronological-bible/subscription/1143073754/";
@@ -16,7 +15,7 @@ interface DayPlan {
 }
 
 // Function to extract daily readings correctly
-async function loadBiblePlan(): Promise<DayPlan[] | null> {
+export async function loadBiblePlan(): Promise<DayPlan[] | null> {
   try {
     if (!firecrawl.apiKey) {
       throw new Error(
@@ -48,7 +47,7 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
     }
 
     // Process and structure data
-    const structuredPlan = result.days.map((day, index) => ({
+    const structuredPlan = result.days.map((day: any, index: number) => ({
       day: index + 1,
       date: day.date || `Day ${index + 1}`,
       readings: day.readings?.passage || [],
@@ -59,47 +58,4 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
     console.error("Error loading Bible plan:", error instanceof Error ? error.message : String(error));
     return null;
   }
-}
-
-export default function BiblePlanComponent() {
-  const [biblePlan, setBiblePlan] = useState<DayPlan[]>([]);
-  const [error, setError] = useState<string>("");
-
-  useEffect(() => {
-    loadBiblePlan()
-      .then((data) => {
-        if (data) {
-          setBiblePlan(data);
-        } else {
-          setError("Failed to fetch Bible plan. Please try again later.");
-        }
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
-  }, []);
-
-  return (
-    <div>
-      <h2>Bible Plan (365 Days)</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {biblePlan.length > 0 ? (
-        <div>
-          {biblePlan.map((day) => (
-            <div
-              key={day.day}
-              style={{ marginBottom: "20px", borderBottom: "1px solid #ccc", paddingBottom: "10px" }}
-            >
-              <h3>{day.date}</h3>
-              <ul>
-                {day.readings.map((passage, idx) => (
-                  <li key={idx}>{passage}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p>Loading...</p>
-      )}
-    </div>
-  );
 }
