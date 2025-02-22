@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -30,6 +29,7 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
   const { toast } = useToast();
   const [bibleContent, setBibleContent] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const fetchBibleContent = async () => {
@@ -37,66 +37,80 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
       try {
         const contents: { [key: string]: string } = {};
         for (const reference of references) {
-          // Format the reference to match the API requirements
-          const formattedRef = encodeURIComponent(reference);
-          console.log('Fetching reference:', formattedRef);
-          
-          const url = `https://bible-api.deno.dev/${translation}/${formattedRef}`;
-          console.log('API URL:', url);
-          
-          const response = await axios.get(url);
-          console.log('API Response:', response.data);
-          
-          if (response.data && Array.isArray(response.data)) {
-            contents[reference] = response.data.map((verse: any) => verse.text).join(' ');
-          } else if (response.data && typeof response.data === 'string') {
-            contents[reference] = response.data;
-          } else if (response.data && response.data.text) {
-            contents[reference] = response.data.text;
-          } else {
-            console.error('Unexpected response format:', response.data);
-            throw new Error('Unexpected API response format');
+          try {
+            // Format the reference to match the API requirements
+            const formattedRef = reference
+              .replace(/\s+/g, '+')  // Replace spaces with plus
+              .replace(/:/g, '.')    // Replace colons with dots
+              .replace(/[^\w\d+.-]/g, ''); // Remove any other special characters
+            
+            const url = `https://bible-api.deno.dev/api/${translation}/${formattedRef}`;
+            
+            const response = await axios.get(url, {
+              timeout: 10000, // 10 second timeout
+              headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+              }
+            });
+
+            if (response.data && typeof response.data === 'string') {
+              contents[reference] = response.data;
+            } else if (response.data && response.data.text) {
+              contents[reference] = response.data.text;
+            } else if (response.data && Array.isArray(response.data)) {
+              contents[reference] = response.data.map((verse: any) => verse.text).join(' ');
+            } else {
+              throw new Error('Invalid response format');
+            }
+          } catch (error: any) {
+            console.error(`Error fetching ${reference}:`, error);
+            contents[reference] = `Error loading ${reference}. Please try again.`;
           }
         }
-        console.log('Processed content:', contents);
+        
         setBibleContent(contents);
-      } catch (error: any) {
-        console.error('Error fetching Bible content:', error);
-        console.error('Error details:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status
-        });
-        
-        toast({
-          title: "Error",
-          description: "Failed to load Bible content. Please try again.",
-          variant: "destructive",
-        });
-        
-        const errorContent: { [key: string]: string } = {};
-        references.forEach(ref => {
-          errorContent[ref] = "Unable to load Bible content. Please try again.";
-        });
-        setBibleContent(errorContent);
-      } finally {
         setIsLoading(false);
+        
+        // Reset retry count on successful fetch
+        setRetryCount(0);
+        
+      } catch (error: any) {
+        console.error('Error in fetchBibleContent:', error);
+        
+        // Implement retry logic
+        if (retryCount < 3) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, 2000 * (retryCount + 1)); // Exponential backoff
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to load Bible content after multiple attempts. Please check your connection.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+        }
       }
     };
 
     fetchBibleContent();
-  }, [references, translation, toast]);
+  }, [references, translation, toast, retryCount]);
+
+  const handleRetry = () => {
+    setRetryCount(0); // Reset retry count
+    setIsLoading(true); // Show loading state
+  };
 
   const handleGenerateInsights = () => {
     toast({
       title: "Generating Insights",
       description: "AI is analyzing the passage...",
     });
-    // TODO: Implement AI insights generation
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6 space-y-8 animate-fadeIn">
+    <div className="w-full max-w-4xl mx-auto p-6 space-y-8">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-serif">Day {day}</h2>
         <Select value={translation} onValueChange={onTranslationChange}>
@@ -118,13 +132,32 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
           {references.map((reference, index) => (
             <div key={index} className="space-y-4">
               <h3 className="text-xl font-serif">{reference}</h3>
-              <p className="font-serif text-lg leading-relaxed whitespace-pre-line">
+              <div className="font-serif text-lg leading-relaxed">
                 {isLoading ? (
-                  "Loading scripture content..."
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin h-4 w-4 border-2 border-gray-500 rounded-full border-t-transparent"></div>
+                    <span>Loading scripture...</span>
+                  </div>
                 ) : (
-                  bibleContent[reference] || `Unable to load content for ${reference}`
+                  <div>
+                    {bibleContent[reference]?.includes('Error') ? (
+                      <div className="text-red-500 flex items-center space-x-2">
+                        <span>{bibleContent[reference]}</span>
+                        <Button
+                          onClick={handleRetry}
+                          variant="outline"
+                          size="sm"
+                          className="ml-2"
+                        >
+                          Retry
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-line">{bibleContent[reference]}</p>
+                    )}
+                  </div>
                 )}
-              </p>
+              </div>
             </div>
           ))}
         </div>
@@ -141,3 +174,5 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
     </div>
   );
 };
+
+export default BibleReader;
