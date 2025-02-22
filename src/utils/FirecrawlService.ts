@@ -1,17 +1,6 @@
 
 import FirecrawlApp from '@mendable/firecrawl-js';
 
-interface CrawlResult {
-  data: {
-    days: Array<{
-      date?: string;
-      readings?: {
-        passage?: string[];
-      };
-    }>;
-  };
-}
-
 export class FirecrawlService {
   private static API_KEY_STORAGE_KEY = 'firecrawl_api_key';
   private static firecrawlApp: FirecrawlApp | null = null;
@@ -30,7 +19,7 @@ export class FirecrawlService {
       const response = await this.firecrawlApp.crawlUrl(
         'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
         {
-          extractors: {
+          elements: {
             days: {
               selector: ".day",
               extract: {
@@ -46,11 +35,18 @@ export class FirecrawlService {
           },
           waitForSelector: ".day"
         }
-      ) as CrawlResult;
+      );
+
+      if ('error' in response) {
+        return { 
+          success: false, 
+          error: response.error 
+        };
+      }
 
       return { 
         success: true,
-        data: response 
+        data: response.data 
       };
     } catch (error) {
       console.error('Error during crawl:', error);
