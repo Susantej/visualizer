@@ -4,6 +4,7 @@ import { OpenAI } from 'openai';
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true // WARNING: This is not secure for production use
 });
 
 interface RequestBody {
