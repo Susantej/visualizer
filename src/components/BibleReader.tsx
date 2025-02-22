@@ -20,17 +20,28 @@ const translations = [
 ];
 
 const formatBibleReference = (reference: string): string => {
-  // Split reference into book and verses
-  const parts = reference.split(' ');
-  const book = parts[0];
-  const versePart = parts.slice(1).join('');
+  // Handle range references like "Genesis 1:1-2:25"
+  const rangeMatch = reference.match(/^(\w+)\s+(\d+):(\d+)-(\d+):(\d+)$/);
+  if (rangeMatch) {
+    const [_, book, startChapter, startVerse, endChapter, endVerse] = rangeMatch;
+    return `${book}/${startChapter}/${startVerse}/${endChapter}/${endVerse}`;
+  }
   
-  // Handle chapter:verse format
-  return `${book}/${versePart}`
-    .replace(/\s+/g, '') // Remove spaces
-    .replace(/:/g, '/') // Replace colons with forward slashes
-    .replace(/-/g, '/') // Replace hyphens with forward slashes
-    .replace(/[^\w\d/]/g, ''); // Remove any other special characters
+  // Handle single chapter:verse references
+  const singleMatch = reference.match(/^(\w+)\s+(\d+):(\d+)$/);
+  if (singleMatch) {
+    const [_, book, chapter, verse] = singleMatch;
+    return `${book}/${chapter}/${verse}`;
+  }
+  
+  // Handle whole chapter references
+  const chapterMatch = reference.match(/^(\w+)\s+(\d+)$/);
+  if (chapterMatch) {
+    const [_, book, chapter] = chapterMatch;
+    return `${book}/${chapter}`;
+  }
+  
+  return reference.replace(/\s+/g, '/');
 };
 
 export const BibleReader: React.FC<BibleReaderProps> = ({
@@ -54,34 +65,32 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
         for (const reference of references) {
           try {
             const formattedRef = formatBibleReference(reference);
-            const url = `https://bible-api.deno.dev/api/${translation}/${formattedRef}`;
+            const url = `https://bible-api.deno.dev/${translation}/${formattedRef}`;
             
-            console.log('Fetching:', url); // Debug log
+            console.log('Fetching:', url);
             
             const response = await fetch(url, {
               headers: {
-                'Accept': 'application/json',
+                'Accept': 'application/json, text/plain',
                 'Cache-Control': 'no-cache'
               }
             });
 
+            if (response.status === 0) {
+              throw new Error('CORS error - API not accessible. Please check server configuration.');
+            }
+
             if (!response.ok) {
-              console.error('API Error:', {
-                status: response.status,
-                statusText: response.statusText,
-                url: url
-              });
               throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const text = await response.text(); // Get raw response text first
-            console.log('Raw response:', text); // Debug log
+            const text = await response.text();
+            console.log('Response:', text);
             
             let data;
             try {
               data = JSON.parse(text);
-            } catch (e) {
-              // If it's not JSON, use the text directly
+            } catch {
               data = text;
             }
 
@@ -96,25 +105,18 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
             }
           } catch (error: any) {
             console.error(`Error fetching ${reference}:`, error);
-            contents[reference] = `Error loading ${reference}. ${error.message}`;
+            contents[reference] = `Error: ${error.message}`;
           }
         }
         
         setBibleContent(contents);
-        setIsLoading(false);
         setRetryCount(0);
         
       } catch (error: any) {
         console.error('Error in fetchBibleContent:', error);
-        
-        if (retryCount < 3) {
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-          }, 2000 * (retryCount + 1));
-        } else {
-          setError(`Failed to load Bible content: ${error.message}`);
-          setIsLoading(false);
-        }
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -122,8 +124,7 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
   }, [references, translation, retryCount]);
 
   const handleRetry = () => {
-    setRetryCount(0);
-    setIsLoading(true);
+    setRetryCount(prev => prev + 1);
   };
 
   return (
@@ -146,7 +147,17 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
 
       {error && (
         <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            {error}
+            <Button
+              onClick={handleRetry}
+              variant="outline"
+              size="sm"
+              className="ml-2"
+            >
+              Retry
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 
@@ -163,7 +174,7 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
                   </div>
                 ) : (
                   <div>
-                    {bibleContent[reference]?.includes('Error') ? (
+                    {bibleContent[reference]?.startsWith('Error') ? (
                       <div className="text-red-500 flex items-center space-x-2">
                         <span>{bibleContent[reference]}</span>
                         <Button
