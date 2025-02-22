@@ -1,33 +1,20 @@
-
-import React, { useEffect, useState } from "react";
-import FirecrawlApp from "@mendable/firecrawl-js";
+import { FirecrawlClient, CrawlResult, CrawlParams, CrawlStatusResponse, ErrorResponse } from "@mendable/firecrawl-js";
+import { useEffect, useState } from "react";
 
 const BIBLE_PLAN_URL =
   "https://www.bible.com/users/TejuoshoSusan142/reading-plans/10819-the-one-year-chronological-bible/subscription/1143073754/";
 
-const firecrawl = new FirecrawlApp({
+const firecrawl = new FirecrawlClient({
   apiKey: import.meta.env.VITE_FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY,
 });
 
-interface DayPlan {
-  day: number;
-  date: string;
-  readings: string[];
-}
-
-interface CrawlResult {
-  data: {
-    days: Array<{
-      date?: string;
-      readings?: {
-        passage?: string[];
-      };
-    }>;
-  };
+// Type guard to check if the response is an ErrorResponse
+function isErrorResponse(response: any): response is ErrorResponse {
+  return response && "error" in response;
 }
 
 // Function to extract daily readings correctly
-async function loadBiblePlan(): Promise<DayPlan[] | null> {
+async function loadBiblePlan(): Promise<CrawlResult | null> {
   try {
     if (!firecrawl.apiKey) {
       throw new Error(
@@ -37,23 +24,26 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
 
     console.log("Starting to load Bible plan...");
 
-    const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL, {
-      extractors: {
+    const result: CrawlStatusResponse | ErrorResponse = await firecrawl.crawl({
+      url: BIBLE_PLAN_URL,
+      elements: {
         days: {
-          selector: ".day",
-          extract: {
-            date: ".day-title",
-            readings: {
-              selector: ".readings",
-              extract: {
-                passage: "li"
-              }
-            }
-          }
-        }
+          _root: ".day", // Adjust based on HTML structure
+          date: ".day-title", // The title for each day (e.g., "Day 3")
+          readings: {
+            _root: ".readings", // The container that holds the readings
+            passage: "li", // Each Bible passage inside the list
+          },
+        },
       },
-      waitForSelector: ".day"
-    }) as CrawlResult;
+      waitForSelector: ".day",
+    });
+
+    // Check if Firecrawl returned an error
+    if (isErrorResponse(result)) {
+      console.error("Firecrawl API Error:", result.error);
+      throw new Error(`API Error: ${result.error}`);
+    }
 
     console.log("Crawl result:", result);
 
@@ -63,21 +53,21 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
 
     // Process and structure data
     const structuredPlan = result.data.days.map((day, index) => ({
-      day: index + 1,
+      day: index + 1, // Assuming ordered structure
       date: day.date || `Day ${index + 1}`,
-      readings: day.readings?.passage || []
+      readings: day.readings?.passage || [],
     }));
 
     return structuredPlan;
   } catch (error) {
-    console.error("Error loading Bible plan:", error instanceof Error ? error.message : String(error));
-    return null;
+    console.error("Error loading Bible plan:", error.message);
+    return null; // Handle error case
   }
 }
 
-const BiblePlanComponent: React.FC = () => {
-  const [biblePlan, setBiblePlan] = useState<DayPlan[]>([]);
-  const [error, setError] = useState<string>("");
+export default function BiblePlanComponent() {
+  const [biblePlan, setBiblePlan] = useState<any[]>([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     loadBiblePlan()
@@ -88,7 +78,7 @@ const BiblePlanComponent: React.FC = () => {
           setError("Failed to fetch Bible plan. Please try again later.");
         }
       })
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+      .catch((err) => setError(err.message));
   }, []);
 
   return (
@@ -98,10 +88,7 @@ const BiblePlanComponent: React.FC = () => {
       {biblePlan.length > 0 ? (
         <div>
           {biblePlan.map((day) => (
-            <div
-              key={day.day}
-              style={{ marginBottom: "20px", borderBottom: "1px solid #ccc", paddingBottom: "10px" }}
-            >
+            <div key={day.day} style={{ marginBottom: "20px", borderBottom: "1px solid #ccc", paddingBottom: "10px" }}>
               <h3>{day.date}</h3>
               <ul>
                 {day.readings.map((passage, idx) => (
@@ -116,6 +103,5 @@ const BiblePlanComponent: React.FC = () => {
       )}
     </div>
   );
-};
+}
 
-export default BiblePlanComponent;
