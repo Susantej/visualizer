@@ -27,13 +27,14 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
     console.log("Starting to load Bible plan...");
 
     const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL, {
-      selector: ".day",
-      extract: {
-        date: { selector: ".day-title", type: "text" },
-        readings: { 
-          selector: ".readings li",
-          type: "text",
-          isArray: true
+      scrapeOptions: {
+        _root: ".day",
+        _extract: {
+          date: { _root: ".day-title" },
+          readings: { 
+            _root: ".readings li",
+            _array: true
+          }
         }
       },
       waitForSelector: ".day"

@@ -19,13 +19,14 @@ export class FirecrawlService {
       const response = await this.firecrawlApp.crawlUrl(
         'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
         {
-          selector: ".day",
-          extract: {
-            date: { selector: ".day-title", type: "text" },
-            readings: { 
-              selector: ".readings li",
-              type: "text",
-              isArray: true
+          scrapeOptions: {
+            _root: ".day",
+            _extract: {
+              date: { _root: ".day-title" },
+              readings: { 
+                _root: ".readings li",
+                _array: true
+              }
             }
           },
           waitForSelector: ".day"
