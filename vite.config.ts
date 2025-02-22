@@ -11,6 +11,11 @@ export default defineConfig({
     },
   },
   server: {
-    port: 8080
+    port: 8080,
+    allowedHosts: [
+      '214e7af7-40ae-4410-be5c-a43ccb2af213.lovableproject.com',
+      // Include wildcard to allow all Lovable project domains
+      '.lovableproject.com'
+    ]
   }
 })
