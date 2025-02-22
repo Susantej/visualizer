@@ -4,7 +4,7 @@ const BIBLE_PLAN_URL =
   "https://www.bible.com/users/TejuoshoSusan142/reading-plans/10819-the-one-year-chronological-bible/subscription/1143073754/";
 
 const firecrawl = new FirecrawlClient({
-  apiKey: import.meta.env.VITE_FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY|| "fc-961da62d0c67498c8149fbdfda580cf5",
+  apiKey: import.meta.env.VITE_FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY,
 });
 
 // Function to check for API errors
@@ -15,7 +15,7 @@ function isErrorResponse(response: any): response is ErrorResponse {
 async function loadBiblePlan(): Promise<any[] | null> {
   try {
     if (!firecrawl.apiKey) {
-      throw new Error("Firecrawl API key is missing. Set VITE_FIRECRAWL_API_KEY.");
+      throw new Error("Firecrawl API key is missing. Set VITE_FIRECRAWL_API_KEY in Vercel.");
     }
 
     console.log("Fetching Bible plan...");
@@ -49,6 +49,10 @@ async function loadBiblePlan(): Promise<any[] | null> {
     console.error("Error loading Bible plan:", error.message);
     return null;
   }
+}
+
+export default loadBiblePlan;
+
 }
 
 export default loadBiblePlan;
