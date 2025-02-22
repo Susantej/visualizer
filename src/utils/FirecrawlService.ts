@@ -1,9 +1,9 @@
 
-import { FirecrawlDocument } from '@mendable/firecrawl-js';
+import { FirecrawlApp } from '@mendable/firecrawl-js';
 
 export class FirecrawlService {
   private static API_KEY_STORAGE_KEY = 'firecrawl_api_key';
-  private static firecrawlDoc: FirecrawlDocument | null = null;
+  private static firecrawlApp: FirecrawlApp | null = null;
 
   static async crawlBiblePlan(): Promise<{ success: boolean; error?: string; data?: any }> {
     const apiKey = import.meta.env.VITE_FIRECRAWL_API_KEY;
@@ -12,19 +12,21 @@ export class FirecrawlService {
     }
 
     try {
-      if (!this.firecrawlDoc) {
-        this.firecrawlDoc = new FirecrawlDocument({
-          url: 'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
-          apiKey
-        });
+      if (!this.firecrawlApp) {
+        this.firecrawlApp = new FirecrawlApp({ apiKey });
       }
 
-      const result = await this.firecrawlDoc.extract({
-        date: { selector: ".day-title", type: "text" },
-        readings: { selector: ".readings li", type: "text[]" }
-      });
+      const result = await this.firecrawlApp.crawlUrl(
+        'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
+        {
+          scrapeOptions: {
+            date: { selector: ".day-title", type: "text" },
+            readings: { selector: ".readings li", type: "text[]" }
+          }
+        }
+      );
 
-      if (!result) {
+      if (!result.success) {
         return { 
           success: false, 
           error: "Failed to extract data" 
@@ -33,7 +35,7 @@ export class FirecrawlService {
 
       return { 
         success: true,
-        data: result 
+        data: result.data 
       };
     } catch (error) {
       console.error('Error during crawl:', error);

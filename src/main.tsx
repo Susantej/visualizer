@@ -1,12 +1,11 @@
 
 import React, { useEffect, useState } from "react";
-import { FirecrawlDocument } from "@mendable/firecrawl-js";
+import { FirecrawlApp } from "@mendable/firecrawl-js";
 
 const BIBLE_PLAN_URL =
   "https://www.bible.com/users/TejuoshoSusan142/reading-plans/10819-the-one-year-chronological-bible/subscription/1143073754/";
 
-const firecrawl = new FirecrawlDocument({
-  url: BIBLE_PLAN_URL,
+const firecrawl = new FirecrawlApp({
   apiKey: import.meta.env.VITE_FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY,
 });
 
@@ -27,20 +26,23 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
 
     console.log("Starting to load Bible plan...");
 
-    const result = await firecrawl.extract({
-      date: { selector: ".day-title", type: "text" },
-      readings: { selector: ".readings li", type: "text[]" }
+    const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL, {
+      scrapeOptions: {
+        date: { selector: ".day-title", type: "text" },
+        readings: { selector: ".readings li", type: "text[]" }
+      }
     });
 
     console.log("Crawl result:", result);
 
-    if (!result) {
+    if (!result.success) {
       throw new Error("Failed to fetch Bible plan");
     }
 
     // Process and structure data
-    const days = Array.isArray(result.date) ? result.date : [result.date];
-    const readings = Array.isArray(result.readings) ? result.readings : [];
+    const data = result.data;
+    const days = Array.isArray(data.date) ? data.date : [data.date];
+    const readings = Array.isArray(data.readings) ? data.readings : [];
 
     const structuredPlan = days.map((date, index) => ({
       day: index + 1,
