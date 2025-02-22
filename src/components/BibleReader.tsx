@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from './ui/use-toast';
 import { Button } from './ui/button';
+import axios from 'axios';
 
 interface BibleReaderProps {
   day: number;
@@ -27,6 +28,39 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
   onTranslationChange,
 }) => {
   const { toast } = useToast();
+  const [bibleContent, setBibleContent] = useState<{ [key: string]: string }>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBibleContent = async () => {
+      setIsLoading(true);
+      try {
+        const contents: { [key: string]: string } = {};
+        for (const reference of references) {
+          // Using the API.Bible API (example URL - you'll need to replace with actual endpoint)
+          const response = await axios.get(`https://api.scripture.api.bible/v1/bibles/${translation}/passages/${reference}`, {
+            headers: {
+              'api-key': 'YOUR_API_KEY' // You'll need to get an API key from API.Bible
+            }
+          });
+          contents[reference] = response.data.data.content;
+        }
+        setBibleContent(contents);
+      } catch (error) {
+        console.error('Error fetching Bible content:', error);
+        // For now, let's add some sample content so we can see something
+        const sampleContent: { [key: string]: string } = {};
+        references.forEach(ref => {
+          sampleContent[ref] = `Sample content for ${ref}. In the beginning God created the heaven and the earth. And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters.`;
+        });
+        setBibleContent(sampleContent);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBibleContent();
+  }, [references, translation]);
 
   const handleGenerateInsights = () => {
     toast({
@@ -60,7 +94,11 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
             <div key={index} className="space-y-4">
               <h3 className="text-xl font-serif">{reference}</h3>
               <p className="font-serif text-lg leading-relaxed">
-                Loading scripture content...
+                {isLoading ? (
+                  "Loading scripture content..."
+                ) : (
+                  bibleContent[reference] || `Unable to load content for ${reference}`
+                )}
               </p>
             </div>
           ))}
