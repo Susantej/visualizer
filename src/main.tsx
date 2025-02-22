@@ -35,10 +35,10 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
 
     // Process and structure data
     const data = result.data;
-    const plan = data.map((item, index) => ({
+    const plan = data.map((item: any, index) => ({
       day: index + 1,
-      text: item.text || `Day ${index + 1}`,
-      content: item.content ? [item.content] : []
+      text: item.url || `Day ${index + 1}`, // Using url as text since it's guaranteed to exist
+      content: Array.isArray(item.links) ? item.links : [] // Using links array as content since it's guaranteed to exist
     }));
 
     return plan;
