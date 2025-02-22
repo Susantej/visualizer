@@ -1,25 +1,20 @@
 
 import { OpenAI } from 'openai';
-import type { Request, Response } from 'express';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.VITE_OPENAI_API_KEY,
 });
 
-export default async function handler(req: Request, res: Response) {
-  // Handle CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type');
-  
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+interface RequestBody {
+  prompt: string;
+  type: 'text' | 'image';
+}
+
+export async function generateContent(requestBody: RequestBody) {
+  const { prompt, type } = requestBody;
 
   try {
-    const { prompt, type } = req.body;
-
     if (type === 'text') {
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
@@ -35,7 +30,7 @@ export default async function handler(req: Request, res: Response) {
         ]
       });
 
-      res.status(200).json({ text: response.choices[0].message.content });
+      return { text: response.choices[0].message.content };
     } else if (type === 'image') {
       const response = await openai.images.generate({
         model: "dall-e-3",
@@ -44,12 +39,12 @@ export default async function handler(req: Request, res: Response) {
         size: "1024x1024",
       });
 
-      res.status(200).json({ imageUrl: response.data[0].url });
+      return { imageUrl: response.data[0].url };
     } else {
       throw new Error('Invalid type specified');
     }
   } catch (error: any) {
     console.error('Error:', error);
-    res.status(500).json({ error: error.message });
+    throw error;
   }
 }

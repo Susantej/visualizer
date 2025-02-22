@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -42,16 +41,15 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
     try {
       const prompt = `Bible passage: ${references.map(ref => `${ref}: ${bibleContent[ref]}`).join('\n')}`;
       
-      // TODO: Replace with your AI generation endpoint
-      const response = await axios.post('/api/generate', {
+      const response = await generateContent({
         prompt,
         type
       });
 
-      if (type === 'text') {
-        setAiContent(response.data.text);
-      } else {
-        setAiImage(response.data.imageUrl);
+      if (type === 'text' && 'text' in response) {
+        setAiContent(response.text);
+      } else if (type === 'image' && 'imageUrl' in response) {
+        setAiImage(response.imageUrl);
       }
 
       toast({
@@ -78,7 +76,6 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
         for (const reference of references) {
           console.log('Fetching reference:', reference);
           
-          // Using the Bible API
           const url = `https://bible-api.com/${encodeURIComponent(reference)}`;
           console.log('API URL:', url);
           
