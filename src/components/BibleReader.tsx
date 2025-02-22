@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Loader2, ImageIcon, FileTextIcon } from 'lucide-react';
 import axios from 'axios';
+import { generateContent } from '../pages/api/generate';
 
 interface BibleReaderProps {
   day: number;
