@@ -31,7 +31,7 @@ export class FirecrawlService {
 
   static saveApiKey(apiKey: string): void {
     localStorage.setItem(this.API_KEY_STORAGE_KEY, apiKey);
-    this.firecrawlApp = new FirecrawlApp({});
+    this.firecrawlApp = new FirecrawlApp({ apiKey });
     console.log('API key saved successfully');
   }
 
@@ -54,7 +54,7 @@ export class FirecrawlService {
       const crawlResponse = await this.firecrawlApp.crawlUrl(
         'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
         {
-          limit: 366, // Account for potential extra day
+          limit: 366,
           scrapeOptions: {
             formats: ['html']
           }
@@ -76,12 +76,14 @@ export class FirecrawlService {
         const doc = parser.parseFromString(item.html || '', 'text/html');
         
         const dayElement = doc.querySelector('.reading-plan-day');
+        const references = Array.from(dayElement?.querySelectorAll('.reference') || [])
+          .map(ref => ref.textContent?.trim() || '');
+
         return {
           day: index + 1,
+          references,
           title: dayElement?.querySelector('.day-title')?.textContent?.trim() || '',
-          description: dayElement?.querySelector('.day-description')?.textContent?.trim() || '',
-          references: Array.from(dayElement?.querySelectorAll('.reference') || [])
-            .map(ref => ref.textContent?.trim() || '')
+          description: dayElement?.querySelector('.day-description')?.textContent?.trim() || ''
         };
       });
 
