@@ -19,7 +19,6 @@ export const readingPlanData: ReadingPlanDay[] = [
     title: 'The Fall and Its Aftermath',
     description: 'Adam and Eve sin; Cain and Abel'
   },
-  // Adding a few more days as examples
   {
     day: 3,
     references: ['Genesis 5:1-32', 'Genesis 6:1-22'],
@@ -30,12 +29,12 @@ export const readingPlanData: ReadingPlanDay[] = [
     day: 4,
     references: ['Genesis 7:1-24', 'Genesis 8:1-22'],
     title: 'The Flood',
-    description: 'The flood begins and ends; Noah's ark'
+    description: 'The flood begins and ends; Noahs ark'
   },
   {
     day: 5,
     references: ['Genesis 9:1-29', 'Genesis 10:1-32'],
-    title: 'God's Covenant with Noah',
-    description: 'Rainbow covenant; Noah's descendants'
+    title: 'Gods Covenant with Noah',
+    description: 'Rainbow covenant; Noahs descendants'
   }
 ];
