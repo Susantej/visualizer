@@ -13,17 +13,12 @@ interface BibleReaderProps {
   onTranslationChange: (translation: string) => void;
 }
 
-interface BibleVerse {
-  book_id: string;
-  book_name: string;
-  chapter: number;
-  verse: number;
-  text: string;
-}
-
 const translations = [
-  { value: 'kjv', label: 'King James Version' },
-  { value: 'web', label: 'World English Bible' },
+  { value: 'KJV', label: 'King James Version' },
+  { value: 'NIV', label: 'New International Version' },
+  { value: 'ESV', label: 'English Standard Version' },
+  { value: 'NKJV', label: 'New King James Version' },
+  { value: 'AMPC', label: 'Amplified Bible Classic' },
 ];
 
 export const BibleReader: React.FC<BibleReaderProps> = ({
@@ -42,11 +37,12 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
       try {
         const contents: { [key: string]: string } = {};
         for (const reference of references) {
-          // Using the bible_api.git API
-          const response = await axios.get(`https://bible-api.com/${reference}?translation=${translation.toLowerCase()}`);
+          // Using wldeh/bible-api
+          const response = await axios.get(`https://bible-api.deno.dev/${translation}/${reference}`);
           
-          // The API returns the text directly
-          contents[reference] = response.data.text;
+          // Extract the verses and combine them
+          const verses = response.data.verses;
+          contents[reference] = verses.map((verse: any) => verse.text).join(' ');
         }
         setBibleContent(contents);
       } catch (error) {
