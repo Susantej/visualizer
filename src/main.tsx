@@ -6,6 +6,7 @@ export default function BiblePlanComponent() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+     console.log("API Key Loaded:", import.meta.env.VITE_FIRECRAWL_API_KEY ? "✅ Yes" : "❌ No");
     loadBiblePlan()
       .then((data) => {
         if (data) {
