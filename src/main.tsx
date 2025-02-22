@@ -27,19 +27,29 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
 
     const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL);
 
-    console.log("Crawl result:", result);
-
+    console.log("Full Crawl Response:", JSON.stringify(result, null, 2));
+    
     if (!result.success) {
       throw new Error("Failed to fetch Bible plan");
     }
 
+    // Log extracted data from each document
+    result.data.forEach((doc: any, index: number) => {
+      console.log(`Document ${index + 1} extracted data:`, doc.extract());
+    });
+
     // Process and structure data
     const data = result.data;
-    const plan = data.map((item: any, index) => ({
-      day: index + 1,
-      text: item.url || `Day ${index + 1}`, // Using url as text since it's guaranteed to exist
-      content: Array.isArray(item.links) ? item.links : [] // Using links array as content since it's guaranteed to exist
-    }));
+    const plan = data.map((item: any, index) => {
+      const extracted = item.extract();
+      console.log(`Extracted data for day ${index + 1}:`, extracted);
+      
+      return {
+        day: index + 1,
+        text: item.url || `Day ${index + 1}`,
+        content: Array.isArray(item.links) ? item.links : []
+      };
+    });
 
     return plan;
   } catch (error) {
