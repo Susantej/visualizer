@@ -29,8 +29,7 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
     console.log("URL to crawl:", BIBLE_PLAN_URL);
 
     const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL, {
-      limit: 10, // Limiting initial results for testing
-      waitTime: 1000 // Adding wait time between requests
+      limit: 10 // Limiting initial results for testing
     });
 
     // Log the raw response first
