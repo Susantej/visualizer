@@ -27,18 +27,13 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
     console.log("Starting to load Bible plan...");
 
     const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL, {
-      elements: {
-        days: {
-          selector: ".day",
-          extract: {
-            date: ".day-title",
-            readings: {
-              selector: ".readings",
-              extract: {
-                passage: "li"
-              }
-            }
-          }
+      selector: ".day",
+      extract: {
+        date: { selector: ".day-title", type: "text" },
+        readings: { 
+          selector: ".readings li",
+          type: "text",
+          isArray: true
         }
       },
       waitForSelector: ".day"
@@ -51,11 +46,10 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
     }
 
     // Process and structure data
-    const days = result.data?.days || [];
-    const structuredPlan = days.map((day: any, index) => ({
+    const structuredPlan = result.data.map((item: any, index) => ({
       day: index + 1,
-      date: day.date || `Day ${index + 1}`,
-      readings: Array.isArray(day.readings?.passage) ? day.readings.passage : []
+      date: item.date || `Day ${index + 1}`,
+      readings: Array.isArray(item.readings) ? item.readings : []
     }));
 
     return structuredPlan;
