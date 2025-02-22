@@ -20,12 +20,12 @@ export class FirecrawlService {
         'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
         {
           scrapeOptions: {
-            _root: ".day",
-            _extract: {
-              date: { _root: ".day-title" },
+            root: ".day",
+            extract: {
+              date: { root: ".day-title" },
               readings: { 
-                _root: ".readings li",
-                _array: true
+                root: ".readings li",
+                isArray: true
               }
             }
           },
