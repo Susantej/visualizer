@@ -1,13 +1,12 @@
 
 import { useState } from 'react';
 import { BibleReader } from '@/components/BibleReader';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Card } from '@/components/ui/card';
-import { readingPlanData, ReadingPlanDay } from '@/data/readingPlan';
 
 const Index = () => {
-  const [translation, setTranslation] = useState('KJV');
+  const [translation, setTranslation] = useState('en-kjv');
   const { toast } = useToast();
   const [readingPlan, setReadingPlan] = useState<{ day: number; references: string[] } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -15,11 +14,10 @@ const Index = () => {
   const loadReadingPlan = () => {
     setIsLoading(true);
     try {
-      // Get the first day's reading from our static data
-      const firstDay = readingPlanData[0];
+      // Load the first day's reading
       setReadingPlan({
-        day: firstDay.day,
-        references: firstDay.references
+        day: 1,
+        references: ["Genesis 1:1-2:25"]
       });
       
       toast({
