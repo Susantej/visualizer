@@ -1,5 +1,5 @@
 
-import { FirecrawlApp } from '@mendable/firecrawl-js';
+import FirecrawlApp from '@mendable/firecrawl-js';
 
 export class FirecrawlService {
   private static API_KEY_STORAGE_KEY = 'firecrawl_api_key';
