@@ -11,8 +11,8 @@ const firecrawl = new FirecrawlApp({
 
 interface DayPlan {
   day: number;
-  title: string;
-  readings: string[];
+  text: string;
+  content: string[];
 }
 
 async function loadBiblePlan(): Promise<DayPlan[] | null> {
@@ -25,12 +25,7 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
 
     console.log("Starting to load Bible plan...");
 
-    const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL, {
-      scrapeOptions: {
-        title: { selector: ".day-title", type: "text" },
-        readings: { selector: ".readings li", type: "text[]" }
-      }
-    });
+    const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL);
 
     console.log("Crawl result:", result);
 
@@ -40,16 +35,13 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
 
     // Process and structure data
     const data = result.data;
-    const titles = Array.isArray(data.title) ? data.title : [data.title];
-    const readings = Array.isArray(data.readings) ? data.readings : [];
-
-    const structuredPlan = titles.map((title, index) => ({
+    const plan = data.map((item, index) => ({
       day: index + 1,
-      title: title || `Day ${index + 1}`,
-      readings: readings[index] ? [readings[index]] : []
+      text: item.text || `Day ${index + 1}`,
+      content: item.content ? [item.content] : []
     }));
 
-    return structuredPlan;
+    return plan;
   } catch (error) {
     console.error("Error loading Bible plan:", error instanceof Error ? error.message : String(error));
     return null;
@@ -83,9 +75,9 @@ const BiblePlanComponent: React.FC = () => {
               key={day.day}
               style={{ marginBottom: "20px", borderBottom: "1px solid #ccc", paddingBottom: "10px" }}
             >
-              <h3>Day {day.day}: {day.title}</h3>
+              <h3>Day {day.day}: {day.text}</h3>
               <ul>
-                {day.readings.map((passage, idx) => (
+                {day.content.map((passage, idx) => (
                   <li key={idx}>{passage}</li>
                 ))}
               </ul>

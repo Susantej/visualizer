@@ -17,13 +17,7 @@ export class FirecrawlService {
       }
 
       const result = await this.firecrawlApp.crawlUrl(
-        'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
-        {
-          scrapeOptions: {
-            title: { selector: ".day-title", type: "text" },
-            readings: { selector: ".readings li", type: "text[]" }
-          }
-        }
+        'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible'
       );
 
       if (!result.success) {
