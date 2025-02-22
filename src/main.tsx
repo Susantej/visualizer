@@ -1,11 +1,11 @@
 
 import React, { useEffect, useState } from "react";
-import { FirecrawlClient } from "@mendable/firecrawl-js";
+import FirecrawlApp from "@mendable/firecrawl-js";
 
 const BIBLE_PLAN_URL =
   "https://www.bible.com/users/TejuoshoSusan142/reading-plans/10819-the-one-year-chronological-bible/subscription/1143073754/";
 
-const firecrawl = new FirecrawlClient({
+const firecrawl = new FirecrawlApp({
   apiKey: import.meta.env.VITE_FIRECRAWL_API_KEY || process.env.VITE_FIRECRAWL_API_KEY,
 });
 
