@@ -1,1 +1,6 @@
-OPENAI_KEY='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'
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+    organization: "org-h29Ceh6tRERG2SvzqmF2K9ot",
+    project: "proj_P9GJnQgWgTl6HvkLRPmQM3NZ",
+});
