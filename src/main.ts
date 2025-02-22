@@ -7,7 +7,7 @@ console.log('Checking API key:', {
 
 // Initialize Firecrawl client
 const firecrawl = new FirecrawlClient({
-  apiKey: import.meta.env.VITE_FIRECRAWL_API_KEY || 'fc-961da62d0c67498c8149fbdfda580cf5' // Temporarily use direct key if needed
+  apiKey: "fc-961da62d0c67498c8149fbdfda580cf5" 
 });
 
 // Function to load the reading plan
