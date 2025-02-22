@@ -37,22 +37,42 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
       try {
         const contents: { [key: string]: string } = {};
         for (const reference of references) {
-          // Using wldeh/bible-api
-          const response = await axios.get(`https://bible-api.deno.dev/${translation}/${reference}`);
+          // Format the reference to match the API requirements (e.g., "Genesis 1:1-31")
+          const formattedRef = reference.replace(/\s/g, '+');
+          console.log('Fetching reference:', formattedRef);
           
-          // Extract the verses and combine them
-          const verses = response.data.verses;
-          contents[reference] = verses.map((verse: any) => verse.text).join(' ');
+          const url = `https://bible-api.deno.dev/${translation}/${formattedRef}`;
+          console.log('API URL:', url);
+          
+          const response = await axios.get(url);
+          console.log('API Response:', response.data);
+          
+          if (response.data && Array.isArray(response.data)) {
+            // Handle array response format
+            contents[reference] = response.data.map((verse: any) => verse.text).join(' ');
+          } else if (response.data && response.data.verses) {
+            // Handle object response format with verses property
+            contents[reference] = response.data.verses.map((verse: any) => verse.text).join(' ');
+          } else {
+            throw new Error('Unexpected API response format');
+          }
         }
+        console.log('Processed content:', contents);
         setBibleContent(contents);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching Bible content:', error);
+        console.error('Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        
         toast({
           title: "Error",
           description: "Failed to load Bible content. Please try again.",
           variant: "destructive",
         });
-        // Show error state in content
+        
         const errorContent: { [key: string]: string } = {};
         references.forEach(ref => {
           errorContent[ref] = "Unable to load Bible content. Please try again.";
