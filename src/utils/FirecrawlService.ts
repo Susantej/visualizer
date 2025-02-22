@@ -1,22 +1,16 @@
 
 import FirecrawlApp from '@mendable/firecrawl-js';
 
-interface ErrorResponse {
-  success: false;
-  error: string;
+interface CrawlResult {
+  data: {
+    days: Array<{
+      date?: string;
+      readings?: {
+        passage?: string[];
+      };
+    }>;
+  };
 }
-
-interface CrawlStatusResponse {
-  success: true;
-  status: string;
-  completed: number;
-  total: number;
-  creditsUsed: number;
-  expiresAt: string;
-  data: any[];
-}
-
-type CrawlResponse = CrawlStatusResponse | ErrorResponse;
 
 export class FirecrawlService {
   private static API_KEY_STORAGE_KEY = 'firecrawl_api_key';
@@ -33,19 +27,26 @@ export class FirecrawlService {
         this.firecrawlApp = new FirecrawlApp({ apiKey });
       }
 
-      const response = await this.firecrawlApp.crawlUrl('https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible', {
-        selectors: {
-          days: {
-            _root: ".day",
-            date: ".day-title",
-            readings: {
-              _root: ".readings",
-              passage: "li"
+      const response = await this.firecrawlApp.crawlUrl(
+        'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
+        {
+          extractors: {
+            days: {
+              selector: ".day",
+              extract: {
+                date: ".day-title",
+                readings: {
+                  selector: ".readings",
+                  extract: {
+                    passage: "li"
+                  }
+                }
+              }
             }
-          }
-        },
-        waitForSelector: ".day"
-      });
+          },
+          waitForSelector: ".day"
+        }
+      ) as CrawlResult;
 
       return { 
         success: true,

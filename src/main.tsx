@@ -15,6 +15,17 @@ interface DayPlan {
   readings: string[];
 }
 
+interface CrawlResult {
+  data: {
+    days: Array<{
+      date?: string;
+      readings?: {
+        passage?: string[];
+      };
+    }>;
+  };
+}
+
 // Function to extract daily readings correctly
 async function loadBiblePlan(): Promise<DayPlan[] | null> {
   try {
@@ -27,27 +38,31 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
     console.log("Starting to load Bible plan...");
 
     const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL, {
-      selectors: {
+      extractors: {
         days: {
-          _root: ".day",
-          date: ".day-title",
-          readings: {
-            _root: ".readings",
-            passage: "li"
+          selector: ".day",
+          extract: {
+            date: ".day-title",
+            readings: {
+              selector: ".readings",
+              extract: {
+                passage: "li"
+              }
+            }
           }
         }
       },
       waitForSelector: ".day"
-    });
+    }) as CrawlResult;
 
     console.log("Crawl result:", result);
 
-    if (!result || !result.days) {
+    if (!result || !result.data || !result.data.days) {
       throw new Error("Failed to load daily readings.");
     }
 
     // Process and structure data
-    const structuredPlan = result.days.map((day, index) => ({
+    const structuredPlan = result.data.days.map((day, index) => ({
       day: index + 1,
       date: day.date || `Day ${index + 1}`,
       readings: day.readings?.passage || []
