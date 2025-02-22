@@ -3,6 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from './ui/use-toast';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Loader2, ImageIcon, FileTextIcon } from 'lucide-react';
 import axios from 'axios';
 
 interface BibleReaderProps {
@@ -29,6 +33,42 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
   const { toast } = useToast();
   const [bibleContent, setBibleContent] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [aiContent, setAiContent] = useState<string>("");
+  const [aiImage, setAiImage] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const generateAIContent = async (type: 'text' | 'image') => {
+    setIsGenerating(true);
+    try {
+      const prompt = `Bible passage: ${references.map(ref => `${ref}: ${bibleContent[ref]}`).join('\n')}`;
+      
+      // TODO: Replace with your AI generation endpoint
+      const response = await axios.post('/api/generate', {
+        prompt,
+        type
+      });
+
+      if (type === 'text') {
+        setAiContent(response.data.text);
+      } else {
+        setAiImage(response.data.imageUrl);
+      }
+
+      toast({
+        title: "Success",
+        description: `Generated ${type} summary successfully`,
+      });
+    } catch (error) {
+      console.error('Error generating AI content:', error);
+      toast({
+        title: "Error",
+        description: `Failed to generate ${type} summary. Please try again.`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   useEffect(() => {
     const fetchBibleContent = async () => {
@@ -85,18 +125,86 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
     <div className="w-full max-w-4xl mx-auto p-6 space-y-8 animate-fadeIn">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-serif">Day {day}</h2>
-        <Select value={translation} onValueChange={onTranslationChange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select translation" />
-          </SelectTrigger>
-          <SelectContent>
-            {translations.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-4">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <FileTextIcon className="w-4 h-4" />
+                Ask AI
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>AI-Generated Insights</DialogTitle>
+                <DialogDescription>
+                  Generate AI-powered summaries and visualizations for this passage
+                </DialogDescription>
+              </DialogHeader>
+              <Tabs defaultValue="text" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="text">Text Summary</TabsTrigger>
+                  <TabsTrigger value="image">Image</TabsTrigger>
+                </TabsList>
+                <TabsContent value="text" className="space-y-4">
+                  {aiContent ? (
+                    <div className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">
+                      {aiContent}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <Button
+                        onClick={() => generateAIContent('text')}
+                        disabled={isGenerating}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          'Generate Text Summary'
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </TabsContent>
+                <TabsContent value="image" className="space-y-4">
+                  {aiImage ? (
+                    <img src={aiImage} alt="AI-generated visualization" className="w-full rounded-lg" />
+                  ) : (
+                    <div className="text-center py-4">
+                      <Button
+                        onClick={() => generateAIContent('image')}
+                        disabled={isGenerating}
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          'Generate Image'
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </DialogContent>
+          </Dialog>
+          <Select value={translation} onValueChange={onTranslationChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select translation" />
+            </SelectTrigger>
+            <SelectContent>
+              {translations.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Card className="backdrop-blur-sm bg-white/30 dark:bg-black/30 p-6 rounded-lg shadow-lg border border-gray-200 dark:border-gray-800">
