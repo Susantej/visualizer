@@ -1,4 +1,9 @@
 import { FirecrawlClient } from '@mendable/firecrawl-js';
+// At the top of your component
+console.log('Checking API key:', {
+  keyExists: !!import.meta.env.VITE_FIRECRAWL_API_KEY,
+  keyValue: import.meta.env.VITE_FIRECRAWL_API_KEY?.substring(0, 5) + '...'
+});
 
 // Initialize Firecrawl client
 const firecrawl = new FirecrawlClient({
