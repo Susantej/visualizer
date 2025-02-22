@@ -1,37 +1,46 @@
-import { FirecrawlDocument } from "@mendable/firecrawl-js";
 
-const BIBLE_PLAN_URL =
-  "https://www.bible.com/users/TejuoshoSusan142/reading-plans/10819-the-one-year-chronological-bible/subscription/1143073754/";
+import { FirecrawlDocument } from '@mendable/firecrawl-js';
 
-async function loadBiblePlan(): Promise<any[] | null> {
-  try {
-    console.log("Fetching Bible plan...");
+export class FirecrawlService {
+  private static API_KEY_STORAGE_KEY = 'firecrawl_api_key';
+  private static firecrawlDoc: FirecrawlDocument | null = null;
 
-    const document = new FirecrawlDocument({
-      url: BIBLE_PLAN_URL,
-      waitForSelector: ".day-title",
-    });
-
-    const result = await document.extract({
-      dayTitle: { selector: ".day-title", type: "text" },
-      passages: { selector: ".readings li", type: "text[]", attribute: "textContent" },
-    });
-
-    if (!result) {
-      throw new Error("Failed to fetch Bible plan.");
+  static async crawlBiblePlan(): Promise<{ success: boolean; error?: string; data?: any }> {
+    const apiKey = import.meta.env.VITE_FIRECRAWL_API_KEY;
+    if (!apiKey) {
+      return { success: false, error: 'API key not found' };
     }
 
-    console.log("Crawl result:", result);
+    try {
+      if (!this.firecrawlDoc) {
+        this.firecrawlDoc = new FirecrawlDocument({
+          url: 'https://www.bible.com/reading-plans/10819-the-one-year-chronological-bible',
+          apiKey
+        });
+      }
 
-    return result.dayTitle.map((title: string, index: number) => ({
-      day: index + 1,
-      title,
-      readings: result.passages[index] || [],
-    }));
-  } catch (error) {
-    console.error("Error loading Bible plan:", error.message);
-    return null;
+      const result = await this.firecrawlDoc.extract({
+        date: { selector: ".day-title", type: "text" },
+        readings: { selector: ".readings li", type: "text[]" }
+      });
+
+      if (!result) {
+        return { 
+          success: false, 
+          error: "Failed to extract data" 
+        };
+      }
+
+      return { 
+        success: true,
+        data: result 
+      };
+    } catch (error) {
+      console.error('Error during crawl:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to connect to Firecrawl API' 
+      };
+    }
   }
 }
-
-export default loadBiblePlan;
