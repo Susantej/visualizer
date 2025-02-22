@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useToast } from './ui/use-toast';
-import { Button } from './ui/button';
 import axios from 'axios';
 
 interface BibleReaderProps {
@@ -21,16 +20,6 @@ const translations = [
   { value: 'en-amp', label: 'Amplified Bible Classic' },
 ];
 
-const formatReference = (reference: string): string => {
-  // Handle range references like "Genesis 1:1-2:25"
-  const match = reference.match(/^(\w+)\s+(\d+):(\d+)-(\d+):(\d+)$/);
-  if (match) {
-    const [_, book, startChapter, startVerse, endChapter, endVerse] = match;
-    return `${book}/${startChapter}/${startVerse}/${endChapter}/${endVerse}`;
-  }
-  return reference.replace(/\s/g, '/');
-};
-
 export const BibleReader: React.FC<BibleReaderProps> = ({
   day,
   references,
@@ -47,22 +36,22 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
       try {
         const contents: { [key: string]: string } = {};
         for (const reference of references) {
-          const formattedRef = formatReference(reference);
-          console.log('Fetching reference:', formattedRef);
+          console.log('Fetching reference:', reference);
           
-          const url = `https://bible-api.deno.dev/${translation}/${formattedRef}`;
+          // Using the Bible API
+          const url = `https://bible-api.com/${encodeURIComponent(reference)}`;
           console.log('API URL:', url);
           
           const response = await axios.get(url);
           console.log('API Response:', response.data);
           
-          if (typeof response.data === 'string') {
-            contents[reference] = response.data;
+          if (response.data && response.data.text) {
+            contents[reference] = response.data.text;
           } else {
-            console.error('Unexpected response format:', response.data);
             throw new Error('Unexpected API response format');
           }
         }
+        
         console.log('Processed content:', contents);
         setBibleContent(contents);
       } catch (error: any) {
