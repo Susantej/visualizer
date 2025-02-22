@@ -1,24 +1,24 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import OpenAI from "https://deno.land/x/openai@v4.20.1/mod.ts";
+import { OpenAI } from 'openai';
+import type { Request, Response } from 'express';
 
+// Initialize OpenAI client
 const openai = new OpenAI({
-  apiKey: Deno.env.get('OPENAI_API_KEY'),
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-serve(async (req) => {
+export default async function handler(req: Request, res: Response) {
+  // Handle CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type');
+  
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    res.status(200).end();
+    return;
   }
 
   try {
-    const { prompt, type } = await req.json();
+    const { prompt, type } = req.body;
 
     if (type === 'text') {
       const response = await openai.chat.completions.create({
@@ -35,10 +35,7 @@ serve(async (req) => {
         ]
       });
 
-      return new Response(
-        JSON.stringify({ text: response.choices[0].message.content }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      res.status(200).json({ text: response.choices[0].message.content });
     } else if (type === 'image') {
       const response = await openai.images.generate({
         model: "dall-e-3",
@@ -47,21 +44,12 @@ serve(async (req) => {
         size: "1024x1024",
       });
 
-      return new Response(
-        JSON.stringify({ imageUrl: response.data[0].url }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      res.status(200).json({ imageUrl: response.data[0].url });
+    } else {
+      throw new Error('Invalid type specified');
     }
-
-    throw new Error('Invalid type specified');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
-    );
+    res.status(500).json({ error: error.message });
   }
-});
+}
