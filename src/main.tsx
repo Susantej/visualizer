@@ -18,42 +18,71 @@ interface DayPlan {
 async function loadBiblePlan(): Promise<DayPlan[] | null> {
   try {
     if (!firecrawl.apiKey) {
+      console.error("API Key missing or undefined:", firecrawl.apiKey);
       throw new Error(
         "Firecrawl API key is missing. Please set VITE_FIRECRAWL_API_KEY in your environment variables."
       );
     }
 
     console.log("Starting to load Bible plan...");
+    console.log("Using API Key:", firecrawl.apiKey);
+    console.log("URL to crawl:", BIBLE_PLAN_URL);
 
-    const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL);
-
-    console.log("Full Crawl Response:", JSON.stringify(result, null, 2));
-    
-    if (!result.success) {
-      throw new Error("Failed to fetch Bible plan");
-    }
-
-    // Log extracted data from each document
-    result.data.forEach((doc: any, index: number) => {
-      console.log(`Document ${index + 1} extracted data:`, doc.extract());
+    const result = await firecrawl.crawlUrl(BIBLE_PLAN_URL, {
+      limit: 10, // Limiting initial results for testing
+      waitTime: 1000 // Adding wait time between requests
     });
 
-    // Process and structure data
-    const data = result.data;
-    const plan = data.map((item: any, index) => {
-      const extracted = item.extract();
-      console.log(`Extracted data for day ${index + 1}:`, extracted);
-      
-      return {
+    // Log the raw response first
+    console.log("Raw Firecrawl Response:", result);
+
+    if (!result.success) {
+      console.error("Crawl failed with result:", result);
+      throw new Error(`Failed to fetch Bible plan: ${JSON.stringify(result)}`);
+    }
+
+    if (!Array.isArray(result.data)) {
+      console.error("Expected array data but got:", typeof result.data);
+      throw new Error("Invalid response format from Firecrawl");
+    }
+
+    // Log each document's raw data
+    result.data.forEach((doc: any, index: number) => {
+      console.log(`Raw document ${index + 1}:`, doc);
+      try {
+        const extracted = doc.extract();
+        console.log(`Extracted data from document ${index + 1}:`, extracted);
+      } catch (extractError) {
+        console.error(`Failed to extract data from document ${index + 1}:`, extractError);
+      }
+    });
+
+    // Process and structure data with extensive logging
+    const plan = result.data.map((item: any, index) => {
+      console.log(`Processing item ${index + 1}:`, item);
+      let extracted;
+      try {
+        extracted = item.extract();
+        console.log(`Successfully extracted data for day ${index + 1}:`, extracted);
+      } catch (err) {
+        console.warn(`Could not extract data for day ${index + 1}:`, err);
+        extracted = {};
+      }
+
+      const dayPlan = {
         day: index + 1,
         text: item.url || `Day ${index + 1}`,
         content: Array.isArray(item.links) ? item.links : []
       };
+      console.log(`Created day plan for day ${index + 1}:`, dayPlan);
+      return dayPlan;
     });
 
+    console.log("Final processed plan:", plan);
     return plan;
   } catch (error) {
-    console.error("Error loading Bible plan:", error instanceof Error ? error.message : String(error));
+    console.error("Error in loadBiblePlan:", error);
+    console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
     return null;
   }
 }
@@ -61,41 +90,53 @@ async function loadBiblePlan(): Promise<DayPlan[] | null> {
 const BiblePlanComponent: React.FC = () => {
   const [biblePlan, setBiblePlan] = useState<DayPlan[]>([]);
   const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("BiblePlanComponent mounted");
+    setLoading(true);
     loadBiblePlan()
       .then((data) => {
+        console.log("loadBiblePlan returned:", data);
         if (data) {
           setBiblePlan(data);
         } else {
           setError("Failed to fetch Bible plan. Please try again later.");
         }
       })
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+      .catch((err) => {
+        console.error("Error in BiblePlanComponent:", err);
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   return (
-    <div>
-      <h2>Bible Plan (365 Days)</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {biblePlan.length > 0 ? (
-        <div>
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4">Bible Plan (365 Days)</h2>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+      {loading ? (
+        <p>Loading Bible plan...</p>
+      ) : biblePlan.length > 0 ? (
+        <div className="space-y-4">
           {biblePlan.map((day) => (
             <div
               key={day.day}
-              style={{ marginBottom: "20px", borderBottom: "1px solid #ccc", paddingBottom: "10px" }}
+              className="p-4 border-b border-gray-200"
             >
-              <h3>Day {day.day}: {day.text}</h3>
-              <ul>
+              <h3 className="text-xl font-semibold mb-2">Day {day.day}: {day.text}</h3>
+              <ul className="list-disc pl-5">
                 {day.content.map((passage, idx) => (
-                  <li key={idx}>{passage}</li>
+                  <li key={idx} className="text-gray-700">{passage}</li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
       ) : (
-        <p>Loading...</p>
+        <p>No bible plan data available.</p>
       )}
     </div>
   );
