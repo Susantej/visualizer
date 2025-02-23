@@ -8,7 +8,7 @@ interface RequestBody {
 }
 
 const openai = new OpenAI({
-  apiKey: process.env.VITE_OPENAI_API_KEY,
+  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
 });
 
 export async function generateContent(requestBody: RequestBody) {
