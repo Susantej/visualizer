@@ -9,8 +9,15 @@ dotenv.config();
 const app = express();
 const PORT = 8080;
 
+// Configure CORS to allow requests from all origins in development
+app.use(cors({
+  origin: '*', // Allow all origins
+  methods: ['GET', 'POST'], // Allow specific methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allow specific headers
+  credentials: true // Allow credentials
+}));
+
 app.use(express.json());
-app.use(cors());
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -20,6 +27,9 @@ if (!OPENAI_API_KEY) {
   console.error("❌ Missing OpenAI API key. Please set it in your .env file.");
   process.exit(1);
 }
+
+// Add OPTIONS handling for preflight requests
+app.options('/api/generate', cors());
 
 app.post("/api/generate", async (req, res) => {
   try {
