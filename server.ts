@@ -1,3 +1,4 @@
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -13,6 +14,9 @@ app.use(cors());
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+// Add debug log for API key
+console.log("OpenAI API Key:", OPENAI_API_KEY ? "Loaded" : "Not Loaded");
+
 if (!OPENAI_API_KEY) {
   console.error("❌ Missing OpenAI API key. Please set it in your .env file.");
   process.exit(1);
@@ -25,7 +29,8 @@ app.post("/api/generate", async (req, res) => {
       return res.status(400).json({ error: "Missing prompt or type." });
     }
 
-    console.log(`Processing request: ${type} | Prompt length: ${prompt.length}`);
+    // Debug log for generation request
+    console.log("Generating:", { type, prompt });
 
     if (type === "text") {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -44,6 +49,8 @@ app.post("/api/generate", async (req, res) => {
       });
 
       const data = await response.json();
+      console.log("OpenAI Response:", data); // Debug log for API response
+
       if (!response.ok) {
         throw new Error(data.error?.message || "Failed to generate text summary");
       }
@@ -65,6 +72,8 @@ app.post("/api/generate", async (req, res) => {
       });
 
       const data = await response.json();
+      console.log("OpenAI Image Response:", data); // Debug log for image API response
+
       if (!response.ok) {
         throw new Error(data.error?.message || "Failed to generate image");
       }
@@ -74,8 +83,16 @@ app.post("/api/generate", async (req, res) => {
 
     return res.status(400).json({ error: "Invalid type specified." });
   } catch (error: any) {
-    console.error("Error:", error.message);
-    return res.status(500).json({ error: error.message || "Unexpected error" });
+    console.error("Error details:", {
+      message: error.message,
+      response: error.response?.data,
+      stack: error.stack
+    });
+    
+    return res.status(500).json({ 
+      error: error.response?.data || error.message || "Unexpected error",
+      details: error.stack
+    });
   }
 });
 
