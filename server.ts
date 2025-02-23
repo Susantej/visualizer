@@ -7,14 +7,13 @@ import fetch from "node-fetch";
 dotenv.config();
 
 const app = express();
-const PORT = 8080; // Explicitly set port to 8080
+const PORT = 8080;
 
 app.use(express.json());
 app.use(cors());
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Add debug log for API key
 console.log("OpenAI API Key:", OPENAI_API_KEY ? "Loaded" : "Not Loaded");
 
 if (!OPENAI_API_KEY) {
@@ -29,7 +28,6 @@ app.post("/api/generate", async (req, res) => {
       return res.status(400).json({ error: "Prompt is required." });
     }
 
-    // Debug log for generation request
     console.log("Generating:", { type, prompt });
 
     if (type === "text") {
@@ -40,7 +38,7 @@ app.post("/api/generate", async (req, res) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini", // Using the correct model name
+          model: "gpt-4o", // Changed back to gpt-4o
           messages: [
             { role: "system", content: "Provide a concise, insightful analysis of Bible passages." },
             { role: "user", content: prompt }
