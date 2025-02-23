@@ -1,16 +1,15 @@
 
 import express from 'express';
 import cors from 'cors';
-import { Configuration, OpenAIApi } from 'openai';
+import OpenAI from 'openai';
 
 const app = express();
 const port = process.env.PORT || 3001;
 
 // Configure OpenAI
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 // Middleware
 app.use(cors());
@@ -22,7 +21,7 @@ app.post('/api/generate', async (req, res) => {
     const { prompt, type } = req.body;
 
     if (type === 'text') {
-      const completion = await openai.createChatCompletion({
+      const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
           {
@@ -38,15 +37,15 @@ app.post('/api/generate', async (req, res) => {
         max_tokens: 500,
       });
 
-      res.json({ text: completion.data.choices[0].message.content });
+      res.json({ text: completion.choices[0].message.content });
     } else if (type === 'image') {
-      const imageResponse = await openai.createImage({
+      const imageResponse = await openai.images.generate({
         prompt: `Create a respectful, artistic visualization of this Bible passage: ${prompt}. Style: classical art, biblical, respectful, inspirational.`,
         n: 1,
         size: "1024x1024",
       });
 
-      res.json({ imageUrl: imageResponse.data.data[0].url });
+      res.json({ imageUrl: imageResponse.data[0].url });
     } else {
       res.status(400).json({ error: `Invalid type specified: ${type}` });
     }
