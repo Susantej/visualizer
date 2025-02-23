@@ -10,12 +10,13 @@ const app = express();
 const PORT = 8080;
 
 // Configure CORS to allow requests from all origins in development
-app.use(cors({
-  origin: '*', // Allow all origins
-  methods: ['GET', 'POST'], // Allow specific methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allow specific headers
-  credentials: true // Allow credentials
-}));
+app.use(cors());
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  next();
+});
 
 app.use(express.json());
 
@@ -28,15 +29,20 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
-// Add a basic health check route
+// Test route to verify server is working
 app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
 });
 
-// Add OPTIONS handling for preflight requests
-app.options('/api/generate', cors());
+// Test route specifically for /api/generate
+app.get('/api/generate', (req, res) => {
+  res.json({ message: 'POST endpoint is available' });
+});
 
-app.post("/api/generate", async (req, res) => {
+app.post('/api/generate', async (req, res) => {
+  console.log('Received POST request to /api/generate');
+  console.log('Request body:', req.body);
+  
   try {
     const { prompt, type } = req.body;
     if (!prompt) {
@@ -53,7 +59,7 @@ app.post("/api/generate", async (req, res) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4",  // Fixed the model name from "gpt-4o" to "gpt-4"
+          model: "gpt-4",
           messages: [
             { role: "system", content: "Provide a concise, insightful analysis of Bible passages." },
             { role: "user", content: prompt }
@@ -109,6 +115,13 @@ app.post("/api/generate", async (req, res) => {
   }
 });
 
+// Catch-all route for undefined routes
+app.use((req, res) => {
+  console.log(`404: ${req.method} ${req.url} not found`);
+  res.status(404).json({ error: "Route not found" });
+});
+
 app.listen(PORT, () => {
   console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`Try testing the API with: curl -X POST http://localhost:${PORT}/api/generate -H "Content-Type: application/json" -d '{"prompt":"test","type":"text"}'`);
 });
