@@ -1,8 +1,7 @@
 
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { OpenAI } from "https://deno.land/x/openai@1.4.2/mod.ts";
-
-const openai = new OpenAI({ apiKey: Deno.env.get('OPENAI_API_KEY') });
+import { Configuration, OpenAIApi } from "https://esm.sh/openai@3.3.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,9 +22,14 @@ serve(async (req) => {
       throw new Error('Prompt is required');
     }
 
+    const configuration = new Configuration({
+      apiKey: Deno.env.get('OPENAI_API_KEY'),
+    });
+    const openai = new OpenAIApi(configuration);
+
     if (type === 'text') {
       console.log('Generating text with OpenAI...');
-      const response = await openai.chat.completions.create({
+      const completion = await openai.createChatCompletion({
         model: "gpt-4o-mini",
         messages: [
           {
@@ -36,24 +40,23 @@ serve(async (req) => {
             role: "user",
             content: prompt
           }
-        ]
+        ],
       });
 
       console.log('Text generation successful');
-      return new Response(JSON.stringify({ text: response.choices[0].message.content }), {
+      return new Response(JSON.stringify({ text: completion.data.choices[0].message?.content }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else if (type === 'image') {
       console.log('Generating image with OpenAI...');
-      const response = await openai.images.generate({
-        model: "dall-e-3",
+      const response = await openai.createImage({
         prompt: `Create a respectful, artistic visualization of this Bible passage: ${prompt}. Style: classical art, biblical, respectful, inspirational.`,
         n: 1,
         size: "1024x1024",
       });
 
       console.log('Image generation successful');
-      return new Response(JSON.stringify({ imageUrl: response.data[0].url }), {
+      return new Response(JSON.stringify({ imageUrl: response.data.data[0].url }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } else {
