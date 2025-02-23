@@ -18,7 +18,7 @@ serve(async (req) => {
     console.log('Processing request:', { type, promptLength: prompt?.length });
 
     if (type === 'text') {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const apiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
@@ -36,25 +36,33 @@ serve(async (req) => {
               content: prompt
             }
           ],
+          max_tokens: 500,
+          temperature: 0.7,
         }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('OpenAI API error:', error);
-        throw new Error(error.error?.message || 'Failed to generate text summary');
+      const responseText = await apiResponse.text(); // First get raw text
+      console.log('Raw OpenAI response:', responseText);
+
+      if (!apiResponse.ok) {
+        console.error('OpenAI API error:', responseText);
+        throw new Error('Failed to generate text summary');
       }
 
-      const data = await response.json();
-      console.log('OpenAI response received:', { hasChoices: !!data.choices?.length });
-      
+      const data = JSON.parse(responseText); // Then parse it
+      console.log('Parsed OpenAI response:', data);
+
+      if (!data.choices?.[0]?.message?.content) {
+        throw new Error('Invalid response format from OpenAI');
+      }
+
       return new Response(
         JSON.stringify({ text: data.choices[0].message.content }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
     } else if (type === 'image') {
-      const response = await fetch('https://api.openai.com/v1/images/generations', {
+      const apiResponse = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
@@ -68,13 +76,21 @@ serve(async (req) => {
         }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('OpenAI API error:', error);
-        throw new Error(error.error?.message || 'Failed to generate image');
+      const responseText = await apiResponse.text(); // First get raw text
+      console.log('Raw OpenAI image response:', responseText);
+
+      if (!apiResponse.ok) {
+        console.error('OpenAI API error:', responseText);
+        throw new Error('Failed to generate image');
       }
 
-      const data = await response.json();
+      const data = JSON.parse(responseText); // Then parse it
+      console.log('Parsed OpenAI image response:', data);
+
+      if (!data.data?.[0]?.url) {
+        throw new Error('Invalid image response format from OpenAI');
+      }
+
       return new Response(
         JSON.stringify({ imageUrl: data.data[0].url }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
