@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -8,7 +7,7 @@ dotenv.config();
 
 const app = express();
 const PORT = 8080;
-const HOST = '127.0.0.1'; // Explicitly use IPv4
+const HOST = '0.0.0.0'; // Listen on all available network interfaces
 
 // Configure CORS
 app.use(cors());
@@ -126,7 +125,7 @@ app.use((req, res) => {
 
 // Start server with explicit host binding
 const server = app.listen(PORT, HOST, () => {
-  console.log(`✅ Server running on http://${HOST}:${PORT}`);
+  console.log(`✅ Server running on http://localhost:${PORT}`);
   console.log('Available routes:');
   console.log('  GET  / - Health check');
   console.log('  GET  /api/generate - API info');
@@ -151,4 +150,3 @@ process.on('SIGTERM', () => {
     process.exit(0);
   });
 });
-
