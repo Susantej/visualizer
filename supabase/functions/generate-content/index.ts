@@ -1,5 +1,4 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -25,7 +24,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-4', // Fixed model name
           messages: [
             {
               role: 'system',
@@ -41,7 +40,7 @@ serve(async (req) => {
         }),
       });
 
-      const responseText = await apiResponse.text(); // First get raw text
+      const responseText = await apiResponse.text();
       console.log('Raw OpenAI response:', responseText);
 
       if (!apiResponse.ok) {
@@ -49,7 +48,7 @@ serve(async (req) => {
         throw new Error('Failed to generate text summary');
       }
 
-      const data = JSON.parse(responseText); // Then parse it
+      const data = JSON.parse(responseText);
       console.log('Parsed OpenAI response:', data);
 
       if (!data.choices?.[0]?.message?.content) {
@@ -76,7 +75,7 @@ serve(async (req) => {
         }),
       });
 
-      const responseText = await apiResponse.text(); // First get raw text
+      const responseText = await apiResponse.text();
       console.log('Raw OpenAI image response:', responseText);
 
       if (!apiResponse.ok) {
@@ -84,7 +83,7 @@ serve(async (req) => {
         throw new Error('Failed to generate image');
       }
 
-      const data = JSON.parse(responseText); // Then parse it
+      const data = JSON.parse(responseText);
       console.log('Parsed OpenAI image response:', data);
 
       if (!data.data?.[0]?.url) {
