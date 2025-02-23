@@ -29,12 +29,12 @@ export const readingPlanData: ReadingPlanDay[] = [
     day: 4,
     references: ['Genesis 7:1-24', 'Genesis 8:1-22'],
     title: 'The Flood',
-    description: 'The flood begins and ends; Noahs ark'
+    description: "Noah's ark and the flood"
   },
   {
     day: 5,
     references: ['Genesis 9:1-29', 'Genesis 10:1-32'],
     title: 'Gods Covenant with Noah',
-    description: 'Rainbow covenant; Noahs descendants'
+    description: "Rainbow covenant; Noah's descendants"
   }
 ];
