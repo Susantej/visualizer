@@ -38,7 +38,7 @@ app.post("/api/generate", async (req, res) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o", // Changed back to gpt-4o
+          model: "gpt-4o",
           messages: [
             { role: "system", content: "Provide a concise, insightful analysis of Bible passages." },
             { role: "user", content: prompt }
@@ -80,7 +80,7 @@ app.post("/api/generate", async (req, res) => {
     }
 
     return res.status(400).json({ error: "Invalid type specified." });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error details:", {
       message: error.message,
       response: error.response?.data,
