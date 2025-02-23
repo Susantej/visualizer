@@ -7,6 +7,8 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Loader2, ImageIcon, FileTextIcon } from 'lucide-react';
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import axios from 'axios';
 
 interface BibleReaderProps {
@@ -64,12 +66,31 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
   const [aiContent, setAiContent] = useState<string>("");
   const [aiImage, setAiImage] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [textPrompt, setTextPrompt] = useState("");
+  const [imagePrompt, setImagePrompt] = useState("");
 
   const handleGenerateContent = async (type: 'text' | 'image') => {
+    if (!textPrompt && type === 'text') {
+      toast({
+        title: "Error",
+        description: "Please enter a prompt for the text generation",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!imagePrompt && type === 'image') {
+      toast({
+        title: "Error",
+        description: "Please enter a prompt for the image generation",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     try {
-      const prompt = `Bible passage: ${references.map(ref => `${ref}: ${bibleContent[ref]}`).join('\n')}`;
-      
+      const prompt = type === 'text' ? textPrompt : imagePrompt;
       const result = await generateContent(prompt, type);
       
       if (type === 'text') {
@@ -80,13 +101,13 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
 
       toast({
         title: "Success",
-        description: `Generated ${type} summary successfully`,
+        description: `Generated ${type} successfully`,
       });
     } catch (error) {
       console.error('Error generating AI content:', error);
       toast({
         title: "Error",
-        description: `Failed to generate ${type} summary. Please try again.`,
+        description: `Failed to generate ${type}. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -100,13 +121,8 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
       try {
         const contents: { [key: string]: string } = {};
         for (const reference of references) {
-          console.log('Fetching reference:', reference);
-          
           const url = `https://bible-api.com/${encodeURIComponent(reference)}`;
-          console.log('API URL:', url);
-          
           const response = await axios.get(url);
-          console.log('API Response:', response.data);
           
           if (response.data && response.data.text) {
             contents[reference] = response.data.text;
@@ -115,16 +131,9 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
           }
         }
         
-        console.log('Processed content:', contents);
         setBibleContent(contents);
       } catch (error: any) {
         console.error('Error fetching Bible content:', error);
-        console.error('Error details:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status
-        });
-        
         toast({
           title: "Error",
           description: "Failed to load Bible content. Please try again.",
@@ -169,48 +178,70 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
                   <TabsTrigger value="image">Image</TabsTrigger>
                 </TabsList>
                 <TabsContent value="text" className="space-y-4">
-                  {aiContent ? (
-                    <div className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">
-                      {aiContent}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="textPrompt">Enter your prompt for text generation</Label>
+                      <Input
+                        id="textPrompt"
+                        placeholder="Ask a question about the passage..."
+                        value={textPrompt}
+                        onChange={(e) => setTextPrompt(e.target.value)}
+                      />
                     </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <Button
-                        onClick={() => handleGenerateContent('text')}
-                        disabled={isGenerating}
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Generating...
-                          </>
-                        ) : (
-                          'Generate Text Summary'
-                        )}
-                      </Button>
-                    </div>
-                  )}
+                    <Button
+                      onClick={() => handleGenerateContent('text')}
+                      disabled={isGenerating || !textPrompt}
+                      className="w-full"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        'Generate Text Summary'
+                      )}
+                    </Button>
+                    {aiContent && (
+                      <div className="mt-4 p-4 rounded-lg bg-muted">
+                        <p className="text-sm text-muted-foreground whitespace-pre-line">
+                          {aiContent}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
                 <TabsContent value="image" className="space-y-4">
-                  {aiImage ? (
-                    <img src={aiImage} alt="AI-generated visualization" className="w-full rounded-lg" />
-                  ) : (
-                    <div className="text-center py-4">
-                      <Button
-                        onClick={() => handleGenerateContent('image')}
-                        disabled={isGenerating}
-                      >
-                        {isGenerating ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Generating...
-                          </>
-                        ) : (
-                          'Generate Image'
-                        )}
-                      </Button>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="imagePrompt">Enter your prompt for image generation</Label>
+                      <Input
+                        id="imagePrompt"
+                        placeholder="Describe the image you want to generate..."
+                        value={imagePrompt}
+                        onChange={(e) => setImagePrompt(e.target.value)}
+                      />
                     </div>
-                  )}
+                    <Button
+                      onClick={() => handleGenerateContent('image')}
+                      disabled={isGenerating || !imagePrompt}
+                      className="w-full"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        'Generate Image'
+                      )}
+                    </Button>
+                    {aiImage && (
+                      <div className="mt-4">
+                        <img src={aiImage} alt="AI-generated visualization" className="w-full rounded-lg" />
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
               </Tabs>
             </DialogContent>
