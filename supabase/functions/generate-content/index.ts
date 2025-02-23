@@ -1,6 +1,6 @@
 
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Configuration, OpenAIApi } from "https://esm.sh/openai@3.2.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,60 +8,91 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!openAIApiKey) {
-    return new Response(
-      JSON.stringify({ error: 'OpenAI API key not found' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { prompt, type } = await req.json();
-    const configuration = new Configuration({ apiKey: openAIApiKey });
-    const openai = new OpenAIApi(configuration);
+    console.log('Processing request:', { type, promptLength: prompt?.length });
 
     if (type === 'text') {
-      const completion = await openai.createChatCompletion({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are a helpful assistant that provides insightful summaries of Bible passages. Provide a concise, thoughtful analysis focusing on the main themes and lessons."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant that provides insightful summaries of Bible passages. Provide a concise, thoughtful analysis focusing on the main themes and lessons.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+        }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('OpenAI API error:', error);
+        throw new Error(error.error?.message || 'Failed to generate text summary');
+      }
+
+      const data = await response.json();
+      console.log('OpenAI response received:', { hasChoices: !!data.choices?.length });
+      
       return new Response(
-        JSON.stringify({ text: completion.data.choices[0].message?.content }),
+        JSON.stringify({ text: data.choices[0].message.content }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+
     } else if (type === 'image') {
-      const response = await openai.createImage({
-        prompt: `Create a respectful, artistic visualization of this Bible passage: ${prompt}. Style: classical art, biblical, respectful, inspirational.`,
-        n: 1,
-        size: "1024x1024",
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'dall-e-3',
+          prompt: `Create a respectful, artistic visualization of this Bible passage: ${prompt}. Style: classical art, biblical, respectful, inspirational.`,
+          n: 1,
+          size: '1024x1024'
+        }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('OpenAI API error:', error);
+        throw new Error(error.error?.message || 'Failed to generate image');
+      }
+
+      const data = await response.json();
       return new Response(
-        JSON.stringify({ imageUrl: response.data.data[0].url }),
+        JSON.stringify({ imageUrl: data.data[0].url }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     throw new Error(`Invalid type specified: ${type}`);
   } catch (error) {
+    console.error('Error in generate-content function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        error: error.message || 'An unexpected error occurred',
+        details: error.toString()
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 });
