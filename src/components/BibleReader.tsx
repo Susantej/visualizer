@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -42,7 +43,7 @@ const generateContent = async (prompt: string, type: "text" | "image") => {
     console.log("OpenAI proxy response:", data);
     return type === "text" ? data.text : data.imageUrl;
   } catch (error) {
-    console.error("Error generating content:", error);
+    console.error("Error in generateContent:", error);
     throw error;
   }
 };
