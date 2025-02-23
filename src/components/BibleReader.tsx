@@ -9,7 +9,7 @@ import { Loader2, ImageIcon, FileTextIcon } from 'lucide-react';
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import axios from 'axios';
-import { supabase } from './supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BibleReaderProps {
   day: number;
