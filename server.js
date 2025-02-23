@@ -28,6 +28,11 @@ if (!OPENAI_API_KEY) {
   process.exit(1);
 }
 
+// Add a basic health check route
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'Server is running' });
+});
+
 // Add OPTIONS handling for preflight requests
 app.options('/api/generate', cors());
 
@@ -48,7 +53,7 @@ app.post("/api/generate", async (req, res) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model: "gpt-4",  // Fixed the model name from "gpt-4o" to "gpt-4"
           messages: [
             { role: "system", content: "Provide a concise, insightful analysis of Bible passages." },
             { role: "user", content: prompt }
