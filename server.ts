@@ -7,7 +7,7 @@ import fetch from "node-fetch";
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 8080; // Explicitly set port to 8080
 
 app.use(express.json());
 app.use(cors());
@@ -25,8 +25,8 @@ if (!OPENAI_API_KEY) {
 app.post("/api/generate", async (req, res) => {
   try {
     const { prompt, type } = req.body;
-    if (!prompt || !type) {
-      return res.status(400).json({ error: "Missing prompt or type." });
+    if (!prompt) {
+      return res.status(400).json({ error: "Prompt is required." });
     }
 
     // Debug log for generation request
@@ -49,7 +49,7 @@ app.post("/api/generate", async (req, res) => {
       });
 
       const data = await response.json();
-      console.log("OpenAI Response:", data); // Debug log for API response
+      console.log("OpenAI Response:", data);
 
       if (!response.ok) {
         throw new Error(data.error?.message || "Failed to generate text summary");
@@ -72,7 +72,7 @@ app.post("/api/generate", async (req, res) => {
       });
 
       const data = await response.json();
-      console.log("OpenAI Image Response:", data); // Debug log for image API response
+      console.log("OpenAI Image Response:", data);
 
       if (!response.ok) {
         throw new Error(data.error?.message || "Failed to generate image");
