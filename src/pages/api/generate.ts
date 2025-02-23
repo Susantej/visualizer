@@ -22,7 +22,7 @@ app.post('/api/generate', async (req, res) => {
 
     if (type === 'text') {
       const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
