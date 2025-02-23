@@ -26,19 +26,25 @@ const translations = [
 
 const generateContent = async (prompt: string, type: "text" | "image") => {
   try {
-    // Use port 8080 to match the server configuration
+    console.log("Sending request to server:", { prompt, type });
+    
     const response = await fetch("http://localhost:8080/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt, type }),
     });
 
+    console.log("Server response status:", response.status);
+
     if (!response.ok) {
       const errorData = await response.json();
+      console.error("Server error:", errorData);
       throw new Error(errorData.error || 'Failed to generate content');
     }
 
     const data = await response.json();
+    console.log("Server response data:", data);
+    
     return type === "text" ? data.text : data.imageUrl;
   } catch (error) {
     console.error("Error generating content:", error);

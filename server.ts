@@ -40,10 +40,10 @@ app.post("/api/generate", async (req, res) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model: "gpt-4o-mini", // Using the correct model name
           messages: [
             { role: "system", content: "Provide a concise, insightful analysis of Bible passages." },
-            { role: "user", content: prompt },
+            { role: "user", content: prompt }
           ],
         }),
       });
