@@ -1,3 +1,4 @@
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -47,8 +48,14 @@ app.post('/api/generate', async (req, res) => {
   
   try {
     const { prompt, type } = req.body;
+    
+    // Validate required fields
     if (!prompt) {
       return res.status(400).json({ error: "Prompt is required." });
+    }
+    
+    if (!type || !['text', 'image'].includes(type)) {
+      return res.status(400).json({ error: "Valid type (text or image) is required." });
     }
 
     console.log("Processing request:", { type, prompt });
@@ -69,15 +76,19 @@ app.post('/api/generate', async (req, res) => {
         }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("OpenAI API Error:", error);
+        throw new Error(error.error?.message || "Failed to generate text");
+      }
+
       const data = await response.json();
       console.log("OpenAI Response:", data);
 
-      if (!response.ok) {
-        throw new Error(data.error?.message || "Failed to generate text summary");
-      }
-
       return res.json({ text: data.choices[0]?.message?.content });
     } else if (type === "image") {
+      console.log("Generating image with prompt:", prompt);
+      
       const response = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
@@ -92,21 +103,28 @@ app.post('/api/generate', async (req, res) => {
         }),
       });
 
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("OpenAI Image API Error:", error);
+        throw new Error(error.error?.message || "Failed to generate image");
+      }
+
       const data = await response.json();
       console.log("OpenAI Image Response:", data);
 
-      if (!response.ok) {
-        throw new Error(data.error?.message || "Failed to generate image");
+      if (!data.data?.[0]?.url) {
+        throw new Error("No image URL in response");
       }
 
-      return res.json({ imageUrl: data.data[0]?.url });
+      return res.json({ imageUrl: data.data[0].url });
     }
 
     return res.status(400).json({ error: "Invalid type specified." });
   } catch (error) {
     console.error("Error processing request:", error);
     return res.status(500).json({ 
-      error: error.message || "Internal server error"
+      error: error.message || "Internal server error",
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
