@@ -8,6 +8,7 @@ dotenv.config();
 
 const app = express();
 const PORT = 8080;
+const HOST = '127.0.0.1'; // Explicitly use IPv4
 
 // Configure CORS
 app.use(cors());
@@ -123,9 +124,9 @@ app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
-// Start server
-const server = app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
+// Start server with explicit host binding
+const server = app.listen(PORT, HOST, () => {
+  console.log(`✅ Server running on http://${HOST}:${PORT}`);
   console.log('Available routes:');
   console.log('  GET  / - Health check');
   console.log('  GET  /api/generate - API info');
@@ -141,3 +142,13 @@ server.on('error', (error) => {
   }
   process.exit(1);
 });
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM. Performing graceful shutdown...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
