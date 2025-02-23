@@ -1,7 +1,6 @@
 
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Configuration, OpenAIApi } from "https://esm.sh/openai@3.3.0";
+import { Configuration, OpenAIApi } from "https://esm.sh/openai@3.2.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,26 +8,24 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!openAIApiKey) {
+    return new Response(
+      JSON.stringify({ error: 'OpenAI API key not found' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
     const { prompt, type } = await req.json();
-    console.log('Received request:', { type, promptLength: prompt?.length });
-
-    if (!prompt) {
-      throw new Error('Prompt is required');
-    }
-
-    const configuration = new Configuration({
-      apiKey: Deno.env.get('OPENAI_API_KEY'),
-    });
+    const configuration = new Configuration({ apiKey: openAIApiKey });
     const openai = new OpenAIApi(configuration);
 
     if (type === 'text') {
-      console.log('Generating text with OpenAI...');
       const completion = await openai.createChatCompletion({
         model: "gpt-4o-mini",
         messages: [
@@ -43,33 +40,28 @@ serve(async (req) => {
         ],
       });
 
-      console.log('Text generation successful');
-      return new Response(JSON.stringify({ text: completion.data.choices[0].message?.content }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ text: completion.data.choices[0].message?.content }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     } else if (type === 'image') {
-      console.log('Generating image with OpenAI...');
       const response = await openai.createImage({
         prompt: `Create a respectful, artistic visualization of this Bible passage: ${prompt}. Style: classical art, biblical, respectful, inspirational.`,
         n: 1,
         size: "1024x1024",
       });
 
-      console.log('Image generation successful');
-      return new Response(JSON.stringify({ imageUrl: response.data.data[0].url }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    } else {
-      throw new Error(`Invalid type specified: ${type}`);
+      return new Response(
+        JSON.stringify({ imageUrl: response.data.data[0].url }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    throw new Error(`Invalid type specified: ${type}`);
   } catch (error) {
-    console.error('Error in generate-content function:', error);
-    return new Response(JSON.stringify({ 
-      error: error.message,
-      details: error.response?.data || error.toString()
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });
