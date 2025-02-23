@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -7,7 +8,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Loader2, ImageIcon, FileTextIcon } from 'lucide-react';
 import axios from 'axios';
-import { generateContent } from '../pages/api/generate';
 
 interface BibleReaderProps {
   day: number;
@@ -24,6 +24,22 @@ const translations = [
   { value: 'en-amp', label: 'Amplified Bible Classic' },
 ];
 
+const generateContent = async (prompt: string, type: "text" | "image") => {
+  try {
+    const response = await fetch("http://localhost:3000/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, type }),
+    });
+
+    const data = await response.json();
+    return type === "text" ? data.text : data.imageUrl;
+  } catch (error) {
+    console.error("Error generating content:", error);
+    throw error;
+  }
+};
+
 export const BibleReader: React.FC<BibleReaderProps> = ({
   day,
   references,
@@ -37,20 +53,17 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
   const [aiImage, setAiImage] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const generateAIContent = async (type: 'text' | 'image') => {
+  const handleGenerateContent = async (type: 'text' | 'image') => {
     setIsGenerating(true);
     try {
       const prompt = `Bible passage: ${references.map(ref => `${ref}: ${bibleContent[ref]}`).join('\n')}`;
       
-      const response = await generateContent({
-        prompt,
-        type
-      });
-
-      if (type === 'text' && 'text' in response) {
-        setAiContent(response.text);
-      } else if (type === 'image' && 'imageUrl' in response) {
-        setAiImage(response.imageUrl);
+      const result = await generateContent(prompt, type);
+      
+      if (type === 'text') {
+        setAiContent(result);
+      } else {
+        setAiImage(result);
       }
 
       toast({
@@ -151,7 +164,7 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
                   ) : (
                     <div className="text-center py-4">
                       <Button
-                        onClick={() => generateAIContent('text')}
+                        onClick={() => handleGenerateContent('text')}
                         disabled={isGenerating}
                       >
                         {isGenerating ? (
@@ -172,7 +185,7 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
                   ) : (
                     <div className="text-center py-4">
                       <Button
-                        onClick={() => generateAIContent('image')}
+                        onClick={() => handleGenerateContent('image')}
                         disabled={isGenerating}
                       >
                         {isGenerating ? (
