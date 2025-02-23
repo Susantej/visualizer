@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -10,6 +9,7 @@ import { Loader2, ImageIcon, FileTextIcon } from 'lucide-react';
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import axios from 'axios';
+import { supabase } from './supabase';
 
 interface BibleReaderProps {
   day: number;
@@ -28,25 +28,18 @@ const translations = [
 
 const generateContent = async (prompt: string, type: "text" | "image") => {
   try {
-    console.log("Sending request to server:", { prompt, type });
+    console.log("Sending request to OpenAI proxy:", { prompt, type });
     
-    const response = await fetch("http://localhost:8080/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, type }),
+    const { data, error } = await supabase.functions.invoke("openai-proxy", {
+      body: { prompt, type }
     });
 
-    console.log("Server response status:", response.status);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Server error:", errorData);
-      throw new Error(errorData.error || 'Failed to generate content');
+    if (error) {
+      console.error("OpenAI proxy error:", error);
+      throw new Error(error.message || 'Failed to generate content');
     }
 
-    const data = await response.json();
-    console.log("Server response data:", data);
-    
+    console.log("OpenAI proxy response:", data);
     return type === "text" ? data.text : data.imageUrl;
   } catch (error) {
     console.error("Error generating content:", error);
