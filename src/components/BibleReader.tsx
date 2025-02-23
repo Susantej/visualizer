@@ -26,11 +26,17 @@ const translations = [
 
 const generateContent = async (prompt: string, type: "text" | "image") => {
   try {
-    const response = await fetch("http://localhost:3000/api/generate", {
+    // First check if API is accessible
+    const response = await fetch("http://localhost:3001/api/generate", {  // Changed port to 3001
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt, type }),
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to generate content');
+    }
 
     const data = await response.json();
     return type === "text" ? data.text : data.imageUrl;
