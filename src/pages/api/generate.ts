@@ -26,10 +26,20 @@ export async function generateContent(requestBody: RequestBody) {
 
     if (!response.ok) {
       const error = await response.json();
+      console.error('Error from Edge Function:', error);
       throw new Error(error.message || 'Failed to generate content');
     }
 
     const data = await response.json();
+    console.log('Content generated successfully:', { type, hasData: !!data });
+    
+    if (type === 'text' && !data.text) {
+      throw new Error('No text content received from the API');
+    }
+    if (type === 'image' && !data.imageUrl) {
+      throw new Error('No image URL received from the API');
+    }
+
     return type === 'text' ? { text: data.text } : { imageUrl: data.imageUrl };
   } catch (error: any) {
     console.error('Error in generateContent:', error);
