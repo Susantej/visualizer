@@ -13,31 +13,57 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  next();
-});
-
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-if (!OPENAI_API_KEY) {
-  console.error("❌ Missing OpenAI API key. Please set it in your .env file.");
-  process.exit(1);
+// Validate API key format
+function isValidOpenAIKey(key) {
+  return key && key.startsWith('sk-') && key.length > 40;
 }
 
-// Health check route
-app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'Server is running' });
-});
+// Test the API key on startup
+async function testOpenAIKey() {
+  try {
+    const response = await fetch("https://api.openai.com/v1/models", {
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      console.error("❌ OpenAI API Key validation failed:", error.error?.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("❌ Error validating OpenAI API Key:", error.message);
+    return false;
+  }
+}
 
-app.get('/api/generate', (req, res) => {
-  res.json({ message: 'POST endpoint is available' });
-});
+// Initial setup validation
+async function validateSetup() {
+  if (!OPENAI_API_KEY) {
+    console.error("❌ Missing OpenAI API key. Please set it in your .env file.");
+    return false;
+  }
+
+  if (!isValidOpenAIKey(OPENAI_API_KEY)) {
+    console.error("❌ Invalid OpenAI API key format. Key should start with 'sk-' and be longer than 40 characters.");
+    return false;
+  }
+
+  const isKeyValid = await testOpenAIKey();
+  if (!isKeyValid) {
+    console.error("❌ OpenAI API key validation failed. Please check your key.");
+    return false;
+  }
+
+  console.log("✅ OpenAI API key validated successfully");
+  return true;
+}
 
 app.post('/api/generate', async (req, res) => {
-  console.log('Received POST request to /api/generate');
-  
   try {
     const { prompt, type } = req.body;
     
@@ -49,90 +75,71 @@ app.post('/api/generate', async (req, res) => {
       return res.status(400).json({ error: "Valid type (text or image) is required." });
     }
 
-    console.log("Processing request:", { type, prompt });
+    const endpoint = type === 'text' 
+      ? "https://api.openai.com/v1/chat/completions"
+      : "https://api.openai.com/v1/images/generations";
 
-    if (type === "text") {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+    const body = type === 'text' 
+      ? {
           model: "gpt-4",
           messages: [
-            { 
-              role: "system", 
-              content: "Provide a concise, insightful analysis of Bible passages." 
-            },
-            { 
-              role: "user", 
-              content: prompt 
-            }
+            { role: "system", content: "Provide a concise, insightful analysis of Bible passages." },
+            { role: "user", content: prompt }
           ],
           max_tokens: 1000,
           temperature: 0.7,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error("OpenAI API Error:", data);
-        return res.status(response.status).json({ 
-          error: data.error?.message || "Failed to generate text",
-          details: data.error
-        });
-      }
-
-      if (!data.choices?.[0]?.message?.content) {
-        throw new Error("Invalid response format from OpenAI");
-      }
-
-      return res.json({ 
-        success: true,
-        text: data.choices[0].message.content 
-      });
-
-    } else if (type === "image") {
-      const response = await fetch("https://api.openai.com/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+        }
+      : {
           model: "dall-e-3",
           prompt: `Create a respectful, artistic visualization of this Bible passage: ${prompt}. Style: classical art, biblical, inspirational.`,
           n: 1,
           size: "1024x1024",
           quality: "standard",
           response_format: "url"
-        }),
-      });
+        };
 
-      const data = await response.json();
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
-      if (!response.ok) {
-        console.error("OpenAI Image API Error:", data);
-        return res.status(response.status).json({ 
-          error: data.error?.message || "Failed to generate image",
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        console.error("Authentication Error:", data.error);
+        return res.status(401).json({
+          error: "API key authentication failed",
+          message: "Please check your OpenAI API key configuration.",
           details: data.error
         });
       }
+      
+      return res.status(response.status).json({
+        error: data.error?.message || `Failed to generate ${type}`,
+        details: data.error
+      });
+    }
 
+    if (type === 'text') {
+      if (!data.choices?.[0]?.message?.content) {
+        throw new Error("Invalid response format from OpenAI");
+      }
+      return res.json({ success: true, text: data.choices[0].message.content });
+    } else {
       if (!data.data?.[0]?.url) {
         throw new Error("No image URL in response");
       }
-
-      return res.json({ 
-        success: true,
-        imageUrl: data.data[0].url 
-      });
+      return res.json({ success: true, imageUrl: data.data[0].url });
     }
+    
   } catch (error) {
     console.error("Error processing request:", error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: "Internal server error",
       message: error.message,
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -140,33 +147,16 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    error: 'Server error',
-    message: err.message 
-  });
-});
+// Start server only if setup is valid
+validateSetup().then(isValid => {
+  if (!isValid) {
+    console.error("❌ Server startup aborted due to configuration issues.");
+    process.exit(1);
+  }
 
-// Catch-all route
-app.use((req, res) => {
-  res.status(404).json({ error: "Route not found" });
-});
-
-const server = app.listen(PORT, HOST, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log('Available routes:');
-  console.log('  GET  / - Health check');
-  console.log('  GET  /api/generate - API info');
-  console.log('  POST /api/generate - Generate content');
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('Received SIGTERM. Performing graceful shutdown...');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
+  app.listen(PORT, HOST, () => {
+    console.log(`✅ Server running on http://localhost:${PORT}`);
+    console.log('Available routes:');
+    console.log('  POST /api/generate - Generate content');
   });
 });
