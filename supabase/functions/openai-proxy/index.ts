@@ -13,12 +13,27 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
-  try {
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not set in environment variables')
-    }
+  const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
+  
+  // Add detailed logging for API key validation
+  console.log("Checking OpenAI API key...")
+  if (!OPENAI_API_KEY) {
+    console.error("OpenAI API key is not set in environment variables")
+    return new Response(
+      JSON.stringify({ error: 'OpenAI API key is not configured' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
+  }
 
+  if (!OPENAI_API_KEY.startsWith('sk-') || OPENAI_API_KEY.length <= 40) {
+    console.error("Invalid OpenAI API key format")
+    return new Response(
+      JSON.stringify({ error: 'Invalid OpenAI API key format' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
+  }
+
+  try {
     const { prompt, type } = await req.json()
 
     if (!prompt) {
@@ -28,6 +43,8 @@ serve(async (req) => {
     if (!type || !['text', 'image'].includes(type)) {
       throw new Error('Valid type (text or image) is required')
     }
+
+    console.log(`Processing ${type} generation request...`)
 
     const endpoint = type === 'text' 
       ? "https://api.openai.com/v1/chat/completions"
@@ -66,7 +83,7 @@ serve(async (req) => {
     if (!response.ok) {
       const error = await response.json()
       console.error(`OpenAI API error:`, error)
-      throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`)
+      throw new Error(error.error?.message || `Failed to generate ${type}`)
     }
 
     const data = await response.json()
